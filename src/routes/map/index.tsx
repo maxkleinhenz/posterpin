@@ -1,19 +1,19 @@
 /** biome-ignore-all lint/correctness/useUniqueElementIds: <explanation> */
 import { ClientOnly, createFileRoute } from "@tanstack/react-router";
-import { useGeolocation } from "@uidotdev/usehooks";
-import "maplibre-gl/dist/maplibre-gl.css";
 import * as turf from "@turf/turf";
+import { useGeolocation } from "@uidotdev/usehooks";
 import { api } from "convex/_generated/api";
 import { useQuery } from "convex/react";
-import { FileImage, Pin } from "lucide-react";
-import { useEffect, useMemo, useRef } from "react";
+import { Pin, ZoomIn, ZoomOut } from "lucide-react";
+import "maplibre-gl/dist/maplibre-gl.css";
+import { useMemo } from "react";
 // biome-ignore lint/suspicious/noShadowRestrictedNames: <explanation>
 import Map, {
 	type GeoJSONSourceSpecification,
 	Layer,
-	type MapRef,
 	Marker,
 	Source,
+	useMap,
 } from "react-map-gl/maplibre";
 import { Button } from "@/components/ui/button";
 
@@ -27,8 +27,6 @@ function createGeoJSONCircle(center: [number, number], radiusInMeters: number) {
 		steps: 64,
 		units: "meters",
 	});
-
-	console.log("circle", circle);
 
 	return {
 		type: "geojson" as const,
@@ -45,18 +43,6 @@ function RouteComponent() {
 }
 
 function MapComponent() {
-	const mapRef = useRef<MapRef>(null);
-	const pins = useQuery(api.pins.list);
-	const pinMarkers = useMemo(
-		() =>
-			pins?.map((pin) => (
-				<Marker key={pin._id} longitude={pin.longitude} latitude={pin.latitude}>
-					<FileImage className="fill-amber-300" />
-				</Marker>
-			)),
-		[pins],
-	);
-
 	const geolocation = useGeolocation({
 		enableHighAccuracy: true,
 		maximumAge: 10000,
@@ -87,21 +73,25 @@ function MapComponent() {
 		);
 	}
 
-	console.log("map", mapRef.current?.getMap());
-
 	return (
 		<div className="h-screen w-screen relative">
 			<div className="absolute inset-0">
 				<Map
-					ref={mapRef}
 					initialViewState={{
 						longitude: geolocation.longitude,
 						latitude: geolocation.latitude,
 						zoom: 16,
 					}}
-					onLoad={(e) => console.log("map loaded", e.target)}
+					dragRotate={false}
+					pitchWithRotate={false}
+					keyboard={false}
 					style={{ width: "100%", height: "100%" }}
 					mapStyle="https://api.maptiler.com/maps/streets/style.json?key=aRKRc5rxQmYEFyjrGytq"
+					interactiveLayerIds={["pins-layer"]}
+					onClick={(e) => {
+						console.log(e);
+						console.log(e.features);
+					}}
 				>
 					<AccuracyCricle geolocation={geolocation} />
 					<Marker
@@ -111,7 +101,8 @@ function MapComponent() {
 					>
 						<div className="size-5 rounded-full bg-blue-600 border-2 border-white shadow-md"></div>
 					</Marker>
-					{pinMarkers}
+					<PosterPins />
+					<MapControls />
 				</Map>
 			</div>
 			<AddPin />
@@ -128,6 +119,31 @@ function AddPin() {
 				}}
 			>
 				<Pin /> Add Pin
+			</Button>
+		</div>
+	);
+}
+
+function MapControls() {
+	const { current: map } = useMap();
+
+	return (
+		<div className="absolute top-4 right-4 flex flex-col gap-2">
+			<Button
+				className="rounded-full size-12 cursor-pointer hover:bg-secondary hover:ring-2"
+				variant="secondary"
+				size="icon"
+				onClick={() => map?.zoomIn({ animate: true })}
+			>
+				<ZoomIn className="size-6" />
+			</Button>
+			<Button
+				className="rounded-full size-12 cursor-pointer hover:bg-secondary hover:ring-2"
+				variant="secondary"
+				size="icon"
+				onClick={() => map?.zoomOut({ animate: true })}
+			>
+				<ZoomOut className="size-6" s />
 			</Button>
 		</div>
 	);
@@ -184,6 +200,48 @@ function AccuracyCricle({
 				paint={{
 					"line-color": "#42a5f5",
 					"line-width": 3,
+				}}
+			/>
+		</Source>
+	);
+}
+
+function PosterPins() {
+	const pins = useQuery(api.pins.list);
+
+	const pinsGeoJSON = useMemo(() => {
+		if (!pins) return null;
+
+		return {
+			type: "geojson" as const,
+			data: {
+				type: "FeatureCollection" as const,
+				features: pins.map((pin) => ({
+					type: "Feature" as const,
+					geometry: {
+						type: "Point" as const,
+						coordinates: [pin.longitude, pin.latitude],
+					},
+					properties: {
+						id: pin._id,
+					},
+				})),
+			},
+		} satisfies GeoJSONSourceSpecification;
+	}, [pins]);
+
+	if (!pinsGeoJSON) return null;
+
+	return (
+		<Source id="pins-source" {...pinsGeoJSON}>
+			<Layer
+				id="pins-layer"
+				type="circle"
+				paint={{
+					"circle-radius": 8,
+					"circle-color": "#fbbf24",
+					"circle-stroke-width": 2,
+					"circle-stroke-color": "#ffffff",
 				}}
 			/>
 		</Source>
