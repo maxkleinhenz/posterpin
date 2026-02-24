@@ -1,12 +1,11 @@
 import { defineSchema, defineTable } from 'convex/server'
-import { v } from 'convex/values'
+import { Infer, v } from 'convex/values'
+import type { Doc } from './_generated/dataModel'
 
-export default defineSchema({
+const schema = defineSchema({
   pins: defineTable({
     longitude: v.number(),
     latitude: v.number(),
-    title: v.string(),
-    description: v.string(),
   }),
   products: defineTable({
     title: v.string(),
@@ -18,3 +17,18 @@ export default defineSchema({
     completed: v.boolean(),
   }),
 })
+
+export default schema;
+
+export type Pin = Doc<'pins'>
+
+const pin = schema.tables.pins.validator
+
+export const insertPinSchema = v.object({
+  latitude: pin.fields.latitude,
+  longitude: pin.fields.longitude,
+})
+
+export type InsertPin = Infer<typeof insertPinSchema>
+
+

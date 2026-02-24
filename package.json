@@ -18,8 +18,11 @@
   },
   "dependencies": {
     "@convex-dev/react-query": "0.1.0",
+    "@t3-oss/env-core": "^0.13.10",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-devtools": "^0.7.0",
+    "@tanstack/react-query": "^5.90.21",
+    "@tanstack/react-query-devtools": "^5.91.3",
     "@tanstack/react-router": "^1.132.0",
     "@tanstack/react-router-devtools": "^1.162.4",
     "@tanstack/react-router-ssr-query": "^1.131.7",
@@ -40,7 +43,8 @@
     "react-map-gl": "^8.1.0",
     "tailwind-merge": "^3.0.2",
     "tailwindcss": "^4.1.18",
-    "tw-animate-css": "^1.3.6"
+    "tw-animate-css": "^1.3.6",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@biomejs/biome": "2.2.4",

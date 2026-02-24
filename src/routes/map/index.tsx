@@ -1,14 +1,13 @@
 /** biome-ignore-all lint/correctness/useUniqueElementIds: <explanation> */
 import { ClientOnly, createFileRoute } from "@tanstack/react-router";
 import * as turf from "@turf/turf";
-import { useGeolocation } from "@uidotdev/usehooks";
+import { type GeolocationState, useGeolocation } from "@uidotdev/usehooks";
 import { api } from "convex/_generated/api";
 import { useQuery } from "convex/react";
-import { Pin, ZoomIn, ZoomOut } from "lucide-react";
+import { LocateFixed, Pin, ZoomIn, ZoomOut } from "lucide-react";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useMemo } from "react";
-// biome-ignore lint/suspicious/noShadowRestrictedNames: <explanation>
-import Map, {
+import MapLibre, {
 	type GeoJSONSourceSpecification,
 	Layer,
 	Marker,
@@ -16,6 +15,8 @@ import Map, {
 	useMap,
 } from "react-map-gl/maplibre";
 import { Button } from "@/components/ui/button";
+import { env } from "@/env";
+import { useAddPinMutation } from "@/queries";
 
 export const Route = createFileRoute("/map/")({
 	component: RouteComponent,
@@ -76,7 +77,7 @@ function MapComponent() {
 	return (
 		<div className="h-screen w-screen relative">
 			<div className="absolute inset-0">
-				<Map
+				<MapLibre
 					initialViewState={{
 						longitude: geolocation.longitude,
 						latitude: geolocation.latitude,
@@ -86,7 +87,7 @@ function MapComponent() {
 					pitchWithRotate={false}
 					keyboard={false}
 					style={{ width: "100%", height: "100%" }}
-					mapStyle="https://api.maptiler.com/maps/streets/style.json?key=aRKRc5rxQmYEFyjrGytq"
+					mapStyle={`https://api.maptiler.com/maps/streets/style.json?key=${env.VITE_MAPTILER_KEY}`}
 					interactiveLayerIds={["pins-layer"]}
 					onClick={(e) => {
 						console.log(e);
@@ -102,20 +103,32 @@ function MapComponent() {
 						<div className="size-5 rounded-full bg-blue-600 border-2 border-white shadow-md"></div>
 					</Marker>
 					<PosterPins />
-					<MapControls />
-				</Map>
+					<MapControls geolocation={geolocation} />
+					<AddPin geolocation={geolocation} />
+				</MapLibre>
 			</div>
-			<AddPin />
 		</div>
 	);
 }
 
-function AddPin() {
+function AddPin({ geolocation }: { geolocation: GeolocationState }) {
+	const mutation = useAddPinMutation();
+
+	const longitude = geolocation.longitude;
+	const latitude = geolocation.latitude;
+
+	if (longitude == null || latitude == null) {
+		return null;
+	}
+
 	return (
 		<div className="w-full absolute inset-x-0 bottom-10 flex justify-center">
 			<Button
 				onClick={() => {
-					alert("Add pin");
+					mutation.mutate({
+						latitude: latitude,
+						longitude: longitude,
+					});
 				}}
 			>
 				<Pin /> Add Pin
@@ -124,36 +137,51 @@ function AddPin() {
 	);
 }
 
-function MapControls() {
+function MapControls({ geolocation }: { geolocation: GeolocationState }) {
 	const { current: map } = useMap();
 
 	return (
-		<div className="absolute top-4 right-4 flex flex-col gap-2">
+		<div className="absolute top-4 right-4 flex flex-col gap-2 bg-white rounded-lg p-2 shadow-md">
 			<Button
-				className="rounded-full size-12 cursor-pointer hover:bg-secondary hover:ring-2"
-				variant="secondary"
+				className="size-12 cursor-pointer"
+				variant="ghost"
 				size="icon"
 				onClick={() => map?.zoomIn({ animate: true })}
 			>
 				<ZoomIn className="size-6" />
 			</Button>
 			<Button
-				className="rounded-full size-12 cursor-pointer hover:bg-secondary hover:ring-2"
-				variant="secondary"
+				className="size-12 cursor-pointer"
+				variant="ghost"
 				size="icon"
 				onClick={() => map?.zoomOut({ animate: true })}
 			>
-				<ZoomOut className="size-6" s />
+				<ZoomOut className="size-6" />
 			</Button>
+			{geolocation.longitude != null && geolocation.latitude != null && (
+				<Button
+					className="size-12 cursor-pointer"
+					variant="ghost"
+					size="icon"
+					onClick={() =>
+						map?.flyTo({
+							// @ts-expect-error
+							center: {
+								lng: geolocation.longitude,
+								lat: geolocation.latitude,
+							},
+							animate: true,
+						})
+					}
+				>
+					<LocateFixed className="size-6" />
+				</Button>
+			)}
 		</div>
 	);
 }
 
-function AccuracyCricle({
-	geolocation,
-}: {
-	geolocation: ReturnType<typeof useGeolocation>;
-}) {
+function AccuracyCricle({ geolocation }: { geolocation: GeolocationState }) {
 	const accuracyCricle = useMemo(() => {
 		if (
 			geolocation.longitude == null ||
@@ -191,7 +219,7 @@ function AccuracyCricle({
 				type="fill"
 				paint={{
 					"fill-color": "#42a5f5",
-					"fill-opacity": 0.2,
+					"fill-opacity": 0.1,
 				}}
 			/>
 			<Layer
@@ -199,7 +227,7 @@ function AccuracyCricle({
 				type="line"
 				paint={{
 					"line-color": "#42a5f5",
-					"line-width": 3,
+					"line-width": 2,
 				}}
 			/>
 		</Source>

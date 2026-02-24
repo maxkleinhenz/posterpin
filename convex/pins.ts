@@ -1,4 +1,5 @@
-import { internalMutation, query } from "./_generated/server"
+import { internalMutation, mutation, query } from "./_generated/server"
+import { insertPinSchema } from "./schema"
 
 export const seed = internalMutation(async (ctx) => {
   const allBoards = await ctx.db.query('pins').collect()
@@ -6,8 +7,6 @@ export const seed = internalMutation(async (ctx) => {
     return
   }
   await ctx.db.insert('pins', {
-    title: 'Pin 1',
-    description: 'This is the first pin',
     longitude: 13.726584932188327,
     latitude: 51.029938550838814,
   })
@@ -21,5 +20,16 @@ export const list = query({
       .withIndex('by_creation_time')
       .order('desc')
       .collect()
+  },
+})
+
+
+export const add = mutation({
+  args: insertPinSchema,
+  handler: async (ctx, args) => {
+    return await ctx.db.insert('pins', {
+      latitude: args.latitude,
+      longitude: args.longitude,
+    })
   },
 })
