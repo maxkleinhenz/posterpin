@@ -1,18 +1,23 @@
 /** biome-ignore-all lint/correctness/useUniqueElementIds: <explanation> */
 import { ClientOnly, createFileRoute } from "@tanstack/react-router";
 import * as turf from "@turf/turf";
-import { type GeolocationState, useGeolocation } from "@uidotdev/usehooks";
-import { api } from "convex/_generated/api";
-import { useQuery } from "convex/react";
 import {
+	type GeolocationState,
+	useGeolocation,
+	useMediaQuery,
+} from "@uidotdev/usehooks";
+import {
+	Focus,
 	LocateFixed,
 	MapPinMinusInside,
 	MapPinPlusInside,
+	Menu,
 	Radius,
 	ZoomIn,
 	ZoomOut,
 } from "lucide-react";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { useQuery } from "@tanstack/react-query";
 import type { Id } from "convex/_generated/dataModel";
 import { useMemo, useState } from "react";
 import MapLibre, {
@@ -32,12 +37,22 @@ import {
 	SheetDescription,
 	SheetHeader,
 	SheetTitle,
+	SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { VirtualizedScrollArea } from "@/components/VirtualizedScrollArea";
 import { env } from "@/env";
-import { useAddPinMutation, useRemovePinMutation } from "@/queries";
+import { pinQueries, useAddPinMutation, useRemovePinMutation } from "@/queries";
 
 export const Route = createFileRoute("/map/")({
 	component: RouteComponent,
+	loader: async ({ context: { queryClient } }) => {
+		await queryClient.ensureQueryData(pinQueries.list());
+	},
 });
 
 const pinSourceId = "pins-source";
@@ -106,7 +121,6 @@ type FocusedPin = {
 function MapComponent() {
 	const [disableAccuracyCircle, setDisableAccuracyCircle] = useState(true);
 	const [cursor, setCursor] = useState<string>("grab");
-	const [openRemovePinSheet, setOpenRemovePinSheet] = useState(false);
 	const [focusedPin, setFocusedPin] = useState<FocusedPin | undefined>(
 		undefined,
 	);
@@ -138,10 +152,9 @@ function MapComponent() {
 			const bottomPadding = map.getContainer().clientHeight / 4;
 			map.flyTo({
 				center: (feature.geometry as GeoJSON.Point).coordinates as LngLatLike,
-				zoom: 18,
+				zoom: map.getZoom() < 18 ? 18 : map.getZoom(),
 				padding: { top: 0, bottom: bottomPadding, left: 0, right: 0 },
 			});
-			setOpenRemovePinSheet(true);
 		}
 	}
 
@@ -230,19 +243,19 @@ function MapComponent() {
 							setDisableAccuracyCircle((prev) => !prev)
 						}
 					/>
-					<AddPin geolocation={geolocation} />
+					<PinControl geolocation={geolocation} />
+					<MenuSheet />
 				</MapLibre>
 			</div>
 			<PinDetailsSheet
 				focusedPin={focusedPin}
-				openRemovePinSheet={openRemovePinSheet}
-				setOpenRemovePinSheet={setOpenRemovePinSheet}
+				onClose={() => setFocusedPin(undefined)}
 			/>
 		</div>
 	);
 }
 
-function AddPin({ geolocation }: { geolocation: GeolocationState }) {
+function PinControl({ geolocation }: { geolocation: GeolocationState }) {
 	const mutation = useAddPinMutation();
 
 	const longitude = geolocation.longitude;
@@ -253,7 +266,7 @@ function AddPin({ geolocation }: { geolocation: GeolocationState }) {
 	}
 
 	return (
-		<div className="w-full absolute inset-x-0 bottom-10 flex justify-center">
+		<div className="flex gap-2 w-full absolute inset-x-0 bottom-10 justify-center">
 			<Button
 				className="shadow-md"
 				onClick={() => {
@@ -282,54 +295,82 @@ function MapControls({
 	const latitude = geolocation.latitude;
 
 	return (
-		<div className="absolute top-2 right-2 flex flex-col gap-2 bg-white rounded-lg p-2 shadow-md">
-			<Button
-				className="p-2 cursor-pointer"
-				variant="ghost"
-				size="icon"
-				title="Zoom in"
-				onClick={() => map?.zoomIn({ animate: true })}
-			>
-				<ZoomIn className="size-6" />
-			</Button>
-			<Button
-				className="p-2 cursor-pointer"
-				variant="ghost"
-				size="icon"
-				title="Zoom out"
-				onClick={() => map?.zoomOut({ animate: true })}
-			>
-				<ZoomOut className="size-6" />
-			</Button>
+		<div className="absolute top-2 right-2 grid gap-2 bg-background p-2 rounded-md shadow-md">
+			<Tooltip>
+				<TooltipTrigger asChild>
+					<Button
+						className="p-2 cursor-pointer"
+						variant="ghost"
+						size="icon"
+						onClick={() => map?.zoomIn({ animate: true })}
+					>
+						<ZoomIn className="size-5" />
+						<span className="sr-only">Hineinzoom</span>
+					</Button>
+				</TooltipTrigger>
+				<TooltipContent className="px-2 py-1 text-xs" side="left">
+					Hineinzoom
+				</TooltipContent>
+			</Tooltip>
+			<Tooltip>
+				<TooltipTrigger asChild>
+					<Button
+						className="p-2 cursor-pointer"
+						variant="ghost"
+						size="icon"
+						onClick={() => map?.zoomOut({ animate: true })}
+					>
+						<ZoomOut className="size-5" />
+						<span className="sr-only">Herauszoom</span>
+					</Button>
+				</TooltipTrigger>
+				<TooltipContent className="px-2 py-1 text-xs" side="left">
+					Hineinzoom
+				</TooltipContent>
+			</Tooltip>
 			{longitude != null && latitude != null && (
-				<Button
-					className="p-2 cursor-pointer"
-					variant="ghost"
-					size="icon"
-					title="Center map"
-					onClick={() =>
-						map?.flyTo({
-							center: {
-								lng: longitude,
-								lat: latitude,
-							},
-							animate: true,
-						})
-					}
-				>
-					<LocateFixed className="size-6" />
-				</Button>
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<Button
+							className="p-2 cursor-pointer"
+							variant="ghost"
+							size="icon"
+							onClick={() =>
+								map?.flyTo({
+									center: {
+										lng: longitude,
+										lat: latitude,
+									},
+									animate: true,
+								})
+							}
+						>
+							<LocateFixed className="size-5" />
+							<span className="sr-only">Zentriere Karte</span>
+						</Button>
+					</TooltipTrigger>
+					<TooltipContent className="px-2 py-1 text-xs" side="left">
+						Zentriere Karte
+					</TooltipContent>
+				</Tooltip>
 			)}
 
-			<Button
-				className="p-2 cursor-pointer"
-				variant="ghost"
-				size="icon"
-				title="Toogle accuracy circle"
-				onClick={toggleaAcuracyCircle}
-			>
-				<Radius className="size-6" />
-			</Button>
+			<Tooltip>
+				<TooltipTrigger asChild>
+					<Button
+						className="p-2 cursor-pointer"
+						variant="ghost"
+						size="icon"
+						onClick={toggleaAcuracyCircle}
+					>
+						<Radius className="size-5" />
+						<span className="sr-only">Toogle Genauigkeitskreis</span>
+					</Button>
+				</TooltipTrigger>
+				<TooltipContent className="px-2 py-1 text-xs" side="left">
+					Toogle Genauigkeitskreis
+				</TooltipContent>
+			</Tooltip>
 		</div>
 	);
 }
@@ -398,16 +439,16 @@ function AccuracyCricle({
 }
 
 function PosterPins() {
-	const pins = useQuery(api.pins.list);
+	const pins = useQuery(pinQueries.list());
 
 	const pinsGeoJSON = useMemo(() => {
-		if (!pins) return null;
+		if (!pins.data) return null;
 
 		return {
 			type: "geojson" as const,
 			data: {
 				type: "FeatureCollection" as const,
-				features: pins.map((pin) => ({
+				features: pins.data.map((pin) => ({
 					type: "Feature" as const,
 					geometry: {
 						type: "Point" as const,
@@ -420,7 +461,7 @@ function PosterPins() {
 				})),
 			},
 		} satisfies GeoJSONSourceSpecification;
-	}, [pins]);
+	}, [pins.data]);
 
 	if (!pinsGeoJSON) return null;
 
@@ -441,30 +482,24 @@ function PosterPins() {
 
 function PinDetailsSheet({
 	focusedPin,
-	openRemovePinSheet,
-	setOpenRemovePinSheet,
+	onClose,
 }: {
 	focusedPin: FocusedPin | undefined;
-	openRemovePinSheet: boolean;
-	setOpenRemovePinSheet: (open: boolean) => void;
+	onClose: () => void;
 }) {
 	const removePinMutation = useRemovePinMutation();
 
-	if (!focusedPin) {
-		return null;
-	}
-
 	return (
 		<Sheet
-			open={openRemovePinSheet}
-			onOpenChange={setOpenRemovePinSheet}
+			open={focusedPin != null}
+			onOpenChange={(e) => (e ? null : onClose())}
 			modal={false}
 		>
 			<SheetContent
 				showCloseButton={true}
 				side="bottom"
 				// onInteractOutside={(e) => e.preventDefault()}
-				className="rounded-t-md"
+				className="rounded-t-md w-full max-w-160 left-1/2 -translate-x-1/2"
 			>
 				<SheetHeader>
 					<SheetTitle>Plakat</SheetTitle>
@@ -473,17 +508,151 @@ function PinDetailsSheet({
 					</SheetDescription>
 				</SheetHeader>
 				<div className="p-4">
-					<Button
-						variant="destructive"
-						onClick={() => {
-							removePinMutation.mutate({ id: focusedPin.id as Id<"pins"> });
-							setOpenRemovePinSheet(false);
-						}}
-					>
-						<MapPinMinusInside /> Plakat abhängen
-					</Button>
+					{focusedPin != null && (
+						<Button
+							variant="destructive"
+							onClick={() => {
+								removePinMutation.mutate({ id: focusedPin.id as Id<"pins"> });
+								onClose();
+							}}
+						>
+							<MapPinMinusInside /> Plakat abhängen
+						</Button>
+					)}
 				</div>
 			</SheetContent>
 		</Sheet>
+	);
+}
+
+function MenuSheet() {
+	const { current: map } = useMap();
+
+	const list = useQuery(pinQueries.list());
+	const removePinMutation = useRemovePinMutation();
+	const isSmallDevice = useMediaQuery("only screen and (max-width : 768px)");
+
+	function flyToPin(pin: { latitude: number; longitude: number }) {
+		if (!map) return;
+		const padding = isSmallDevice
+			? {
+					top: 0,
+					bottom: map.getContainer().clientHeight / 2,
+					left: 0,
+					right: 0,
+				}
+			: {
+					top: 0,
+					bottom: 0,
+					left: 384, // width of the SheetContent w-96
+					right: 0,
+				};
+
+		map.flyTo({
+			center: { lat: pin.latitude, lng: pin.longitude },
+			zoom: map.getZoom() < 18 ? 18 : map.getZoom(),
+			padding: padding,
+		});
+	}
+
+	if (!list.data) return null;
+
+	return (
+		<div className="absolute top-2 left-2">
+			<Sheet modal={false}>
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<SheetTrigger asChild>
+							<Button
+								className="cursor-pointer"
+								variant="outline"
+								size="icon-lg"
+							>
+								<Menu className="size-5" />
+								<span className="sr-only">Menü</span>
+							</Button>
+						</SheetTrigger>
+					</TooltipTrigger>
+					<TooltipContent className="px-2 py-1 text-xs" side="right">
+						Menü
+					</TooltipContent>
+				</Tooltip>
+
+				<SheetContent
+					showCloseButton={true}
+					side={isSmallDevice ? "bottom" : "left"}
+					// onInteractOutside={(e) => e.preventDefault()}
+					className="grid grid-rows-[auto_auto_1fr] gap-2 rounded-t-md overflow-hidden w-96 h-1/2 md:h-dvh"
+				>
+					<SheetHeader>
+						<SheetTitle>Kampagne</SheetTitle>
+						<SheetDescription>Details zur Kampagne</SheetDescription>
+					</SheetHeader>
+					<div className="px-4 text-muted-foreground line-clamp-2 text-end text-sm leading-normal font-normal">
+						Insgesamt {list.data.length} Plakate
+					</div>
+					<VirtualizedScrollArea
+						className="px-4"
+						items={list.data}
+						estimateSize={() => 57}
+						listHeight="100%"
+						renderItem={(item) => (
+							<div className="grid grid-cols-[1fr_auto] gap-4 p-2 rounded-md">
+								<div>
+									<p className="line-clamp-1 text-sm leading-snug font-medium underline-offset-4">
+										Plakat
+									</p>
+									<p className="text-muted-foreground line-clamp-2 text-left text-sm leading-normal font-normal">
+										Gehangen am{" "}
+										{new Date(item?._creationTime ?? "").toLocaleString()}
+									</p>
+								</div>
+								<div className="inline-flex w-fit -space-x-px rounded-md rtl:space-x-reverse">
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<Button
+												className="rounded-none rounded-l-md shadow-none focus-visible:z-10"
+												variant="outline"
+												onClick={() =>
+													flyToPin({
+														latitude: item.latitude,
+														longitude: item.longitude,
+													})
+												}
+											>
+												<Focus />
+												<span className="sr-only">Focus</span>
+											</Button>
+										</TooltipTrigger>
+										<TooltipContent className="px-2 py-1 text-xs">
+											Fokusiere Plakat
+										</TooltipContent>
+									</Tooltip>
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<Button
+												className="rounded-none rounded-r-md shadow-none focus-visible:z-10"
+												variant="outline"
+												onClick={() =>
+													removePinMutation.mutate({
+														id: item._id as Id<"pins">,
+													})
+												}
+											>
+												<MapPinMinusInside />
+												<span className="sr-only">Hänge Plakat ab</span>
+											</Button>
+										</TooltipTrigger>
+										<TooltipContent className="px-2 py-1 text-xs">
+											Hänge Plakat ab
+										</TooltipContent>
+									</Tooltip>
+								</div>
+							</div>
+						)}
+					/>
+				</SheetContent>
+			</Sheet>
+		</div>
 	);
 }

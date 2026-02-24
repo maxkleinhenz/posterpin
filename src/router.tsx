@@ -7,6 +7,7 @@ import {
 import { createRouter } from "@tanstack/react-router";
 import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
 import { ConvexProvider } from "convex/react";
+import { TooltipProvider } from "./components/ui/tooltip";
 import { env } from "./env";
 import { routeTree } from "./routeTree.gen";
 
@@ -43,7 +44,7 @@ export function getRouter() {
 		context: { queryClient },
 		Wrap: ({ children }) => (
 			<ConvexProvider client={convexQueryClient.convexClient}>
-				{children}
+				<TooltipProvider>{children}</TooltipProvider>
 			</ConvexProvider>
 		),
 		scrollRestoration: true,

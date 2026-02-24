@@ -7,6 +7,8 @@ import {
 	Scripts,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
+import { DefaultCatchBoundary } from "@/components/DefaultCatchBoundary";
+import { NotFound } from "@/components/NotFound";
 import appCss from "../styles.css?url";
 
 export const Route = createRootRouteWithContext<{
@@ -33,6 +35,14 @@ export const Route = createRootRouteWithContext<{
 		],
 	}),
 	shellComponent: RootDocument,
+	errorComponent: (props) => {
+		return (
+			<RootDocument>
+				<DefaultCatchBoundary {...props} />
+			</RootDocument>
+		);
+	},
+	notFoundComponent: () => <NotFound />,
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
