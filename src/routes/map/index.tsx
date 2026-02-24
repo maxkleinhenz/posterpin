@@ -28,7 +28,7 @@ const pinsClusterLayer = {
 	type: "circle",
 	filter: ["has", "point_count"],
 	paint: {
-		"circle-radius": ["step", ["get", "point_count"], 20, 100, 30, 750, 40],
+		"circle-radius": ["step", ["get", "point_count"], 25, 100, 35, 750, 45],
 		"circle-color": "#fbbf24",
 		"circle-stroke-width": 2,
 		"circle-stroke-color": "#ffffff",
@@ -51,7 +51,7 @@ const pinsUnclusteredPointLayer = {
 	type: "circle",
 	filter: ["!", ["has", "point_count"]],
 	paint: {
-		"circle-radius": 16,
+		"circle-radius": 18,
 		"circle-color": "#fbbf24",
 		"circle-stroke-width": 2,
 		"circle-stroke-color": "#ffffff",
@@ -199,9 +199,9 @@ function MapControls({
 	const latitude = geolocation.latitude;
 
 	return (
-		<div className="absolute top-4 right-4 flex flex-col gap-2 bg-white rounded-lg p-2 shadow-md">
+		<div className="absolute top-2 right-2 flex flex-col gap-2 bg-white rounded-lg p-2 shadow-md">
 			<Button
-				className="size-12 cursor-pointer"
+				className="p-2 cursor-pointer"
 				variant="ghost"
 				size="icon"
 				title="Zoom in"
@@ -210,7 +210,7 @@ function MapControls({
 				<ZoomIn className="size-6" />
 			</Button>
 			<Button
-				className="size-12 cursor-pointer"
+				className="p-2 cursor-pointer"
 				variant="ghost"
 				size="icon"
 				title="Zoom out"
@@ -220,7 +220,7 @@ function MapControls({
 			</Button>
 			{longitude != null && latitude != null && (
 				<Button
-					className="size-12 cursor-pointer"
+					className="p-2 cursor-pointer"
 					variant="ghost"
 					size="icon"
 					title="Center map"
@@ -239,7 +239,7 @@ function MapControls({
 			)}
 
 			<Button
-				className="size-12 cursor-pointer"
+				className="p-2 cursor-pointer"
 				variant="ghost"
 				size="icon"
 				title="Toogle accuracy circle"
