@@ -113,7 +113,7 @@ function MapComponent() {
 	}
 
 	return (
-		<div className="h-screen w-screen relative">
+		<div className="h-dvh w-screen relative">
 			<div className="absolute inset-0">
 				<MapLibre
 					initialViewState={{
