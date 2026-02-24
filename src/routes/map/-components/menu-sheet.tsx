@@ -54,15 +54,14 @@ export default function MenuSheet() {
 	if (!list.data) return null;
 
 	return (
-		<div className="absolute top-2 left-2">
+		<div className="absolute top-2 left-2 grid gap-2">
 			<Sheet modal={false}>
 				<Tooltip>
 					<TooltipTrigger asChild>
 						<SheetTrigger asChild>
 							<Button
-								className="cursor-pointer"
+								className="cursor-pointer min-h-13 min-w-13"
 								variant="outline"
-								size="icon-lg"
 							>
 								<Menu className="size-5" />
 								<span className="sr-only">Menü</span>
