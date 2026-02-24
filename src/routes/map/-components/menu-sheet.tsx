@@ -78,7 +78,7 @@ export default function MenuSheet() {
 					showCloseButton={true}
 					side={isSmallDevice ? "bottom" : "left"}
 					// onInteractOutside={(e) => e.preventDefault()}
-					className="grid grid-rows-[auto_auto_1fr] gap-2 rounded-t-md overflow-hidden w-96 h-1/2 md:h-dvh"
+					className="grid grid-rows-[auto_auto_1fr] gap-2 rounded-t-md overflow-hidden w-full md:w-96 h-1/2 md:h-dvh"
 				>
 					<SheetHeader>
 						<SheetTitle>Kampagne</SheetTitle>

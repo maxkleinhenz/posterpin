@@ -19,7 +19,7 @@ import PinsLayer, {
 	pinSourceId,
 	pinsClusterLayer,
 	pinsUnclusteredPointLayer,
-} from "./-components/pins-layer";
+} from "./-components/pin-layer";
 
 export const Route = createFileRoute("/map/")({
 	component: RouteComponent,
