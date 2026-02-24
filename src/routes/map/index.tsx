@@ -42,7 +42,7 @@ const pinsClusterCountLayer = {
 	layout: {
 		"text-field": "{point_count_abbreviated}",
 		"text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
-		"text-size": 12,
+		"text-size": 16,
 	},
 } as const satisfies LayerProps;
 
@@ -51,7 +51,7 @@ const pinsUnclusteredPointLayer = {
 	type: "circle",
 	filter: ["!", ["has", "point_count"]],
 	paint: {
-		"circle-radius": 12,
+		"circle-radius": 16,
 		"circle-color": "#fbbf24",
 		"circle-stroke-width": 2,
 		"circle-stroke-color": "#ffffff",
