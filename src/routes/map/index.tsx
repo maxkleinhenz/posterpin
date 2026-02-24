@@ -4,9 +4,9 @@ import * as turf from "@turf/turf";
 import { type GeolocationState, useGeolocation } from "@uidotdev/usehooks";
 import { api } from "convex/_generated/api";
 import { useQuery } from "convex/react";
-import { LocateFixed, Pin, ZoomIn, ZoomOut } from "lucide-react";
+import { LocateFixed, Pin, Radius, ZoomIn, ZoomOut } from "lucide-react";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import MapLibre, {
 	type GeoJSONSourceSpecification,
 	Layer,
@@ -44,6 +44,8 @@ function RouteComponent() {
 }
 
 function MapComponent() {
+	const [disableAccuracyCircle, setDisableAccuracyCircle] = useState(true);
+
 	const geolocation = useGeolocation({
 		enableHighAccuracy: true,
 		maximumAge: 10000,
@@ -94,7 +96,10 @@ function MapComponent() {
 						console.log(e.features);
 					}}
 				>
-					<AccuracyCricle geolocation={geolocation} />
+					<AccuracyCricle
+						disable={disableAccuracyCircle}
+						geolocation={geolocation}
+					/>
 					<Marker
 						longitude={geolocation.longitude}
 						latitude={geolocation.latitude}
@@ -103,7 +108,12 @@ function MapComponent() {
 						<div className="size-5 rounded-full bg-blue-600 border-2 border-white shadow-md"></div>
 					</Marker>
 					<PosterPins />
-					<MapControls geolocation={geolocation} />
+					<MapControls
+						geolocation={geolocation}
+						toggleaAcuracyCircle={() =>
+							setDisableAccuracyCircle((prev) => !prev)
+						}
+					/>
 					<AddPin geolocation={geolocation} />
 				</MapLibre>
 			</div>
@@ -137,7 +147,13 @@ function AddPin({ geolocation }: { geolocation: GeolocationState }) {
 	);
 }
 
-function MapControls({ geolocation }: { geolocation: GeolocationState }) {
+function MapControls({
+	geolocation,
+	toggleaAcuracyCircle,
+}: {
+	geolocation: GeolocationState;
+	toggleaAcuracyCircle: () => void;
+}) {
 	const { current: map } = useMap();
 
 	return (
@@ -146,6 +162,7 @@ function MapControls({ geolocation }: { geolocation: GeolocationState }) {
 				className="size-12 cursor-pointer"
 				variant="ghost"
 				size="icon"
+				title="Zoom in"
 				onClick={() => map?.zoomIn({ animate: true })}
 			>
 				<ZoomIn className="size-6" />
@@ -154,6 +171,7 @@ function MapControls({ geolocation }: { geolocation: GeolocationState }) {
 				className="size-12 cursor-pointer"
 				variant="ghost"
 				size="icon"
+				title="Zoom out"
 				onClick={() => map?.zoomOut({ animate: true })}
 			>
 				<ZoomOut className="size-6" />
@@ -163,6 +181,7 @@ function MapControls({ geolocation }: { geolocation: GeolocationState }) {
 					className="size-12 cursor-pointer"
 					variant="ghost"
 					size="icon"
+					title="Center map"
 					onClick={() =>
 						map?.flyTo({
 							// @ts-expect-error
@@ -177,11 +196,27 @@ function MapControls({ geolocation }: { geolocation: GeolocationState }) {
 					<LocateFixed className="size-6" />
 				</Button>
 			)}
+
+			<Button
+				className="size-12 cursor-pointer"
+				variant="ghost"
+				size="icon"
+				title="Toogle accuracy circle"
+				onClick={toggleaAcuracyCircle}
+			>
+				<Radius className="size-6" />
+			</Button>
 		</div>
 	);
 }
 
-function AccuracyCricle({ geolocation }: { geolocation: GeolocationState }) {
+function AccuracyCricle({
+	disable,
+	geolocation,
+}: {
+	disable?: boolean;
+	geolocation: GeolocationState;
+}) {
 	const accuracyCricle = useMemo(() => {
 		if (
 			geolocation.longitude == null ||
@@ -207,6 +242,10 @@ function AccuracyCricle({ geolocation }: { geolocation: GeolocationState }) {
 		);
 		return geoJson;
 	}, [geolocation.accuracy, geolocation.latitude, geolocation.longitude]);
+
+	if (disable) {
+		return null;
+	}
 
 	return (
 		<Source
