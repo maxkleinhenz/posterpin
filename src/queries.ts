@@ -1,7 +1,7 @@
 import { convexQuery } from "@convex-dev/react-query";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useConvex } from "convex/react";
-import type { InsertPin, Pin } from "convex/schema";
+import type { InsertPin, Pin, RemovePin } from "convex/schema";
 import { api } from "../convex/_generated/api";
 import type { Id } from "../convex/_generated/dataModel";
 
@@ -56,3 +56,45 @@ export const useAddPinMutation = () => {
 		},
 	});
 };
+
+export function useRemovePinMutation() {
+	const queryClient = useQueryClient();
+	const convex = useConvex();
+
+	return useMutation({
+		mutationFn: async (pin: RemovePin) => {
+			return await convex.mutation(api.pins.remove, pin);
+		},
+		onMutate: async (pin) => {
+			// Cancel outgoing refetches
+			await queryClient.cancelQueries({ queryKey: pinQueries.list().queryKey });
+
+			// Snapshot the previous value
+			const previousPins = queryClient.getQueryData<Pin[]>(
+				pinQueries.list().queryKey,
+			);
+
+			// Optimistically remove the pin from the cache
+			queryClient.setQueryData<Pin[]>(pinQueries.list().queryKey, (old) => {
+				if (!old) return [];
+				return old.filter((p) => p._id !== pin.id);
+			});
+
+			// Return context for rollback
+			return { previousPins };
+		},
+		onError: (_error, _variables, context) => {
+			// Rollback on error
+			if (context?.previousPins) {
+				queryClient.setQueryData(
+					pinQueries.list().queryKey,
+					context.previousPins,
+				);
+			}
+		},
+		onSettled: () => {
+			// Invalidate to refetch and ensure consistency
+			queryClient.invalidateQueries({ queryKey: pinQueries.list().queryKey });
+		},
+	});
+}

@@ -1,5 +1,5 @@
 import { internalMutation, mutation, query } from "./_generated/server"
-import { insertPinSchema } from "./schema"
+import { insertPinSchema, removePinSchema } from "./schema"
 
 export const seed = internalMutation(async (ctx) => {
   const allBoards = await ctx.db.query('pins').collect()
@@ -31,5 +31,12 @@ export const add = mutation({
       latitude: args.latitude,
       longitude: args.longitude,
     })
+  },
+})
+
+export const remove = mutation({
+  args: removePinSchema,
+  handler: async (ctx, { id }) => {
+    await ctx.db.delete(id)
   },
 })

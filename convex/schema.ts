@@ -28,7 +28,11 @@ export const insertPinSchema = v.object({
   latitude: pin.fields.latitude,
   longitude: pin.fields.longitude,
 })
-
 export type InsertPin = Infer<typeof insertPinSchema>
+
+export const removePinSchema = v.object({
+  id: v.id('pins'),
+})
+export type RemovePin = Infer<typeof removePinSchema>
 
 

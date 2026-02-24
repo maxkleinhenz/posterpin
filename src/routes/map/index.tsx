@@ -4,8 +4,16 @@ import * as turf from "@turf/turf";
 import { type GeolocationState, useGeolocation } from "@uidotdev/usehooks";
 import { api } from "convex/_generated/api";
 import { useQuery } from "convex/react";
-import { LocateFixed, Pin, Radius, ZoomIn, ZoomOut } from "lucide-react";
+import {
+	LocateFixed,
+	MapPinMinusInside,
+	MapPinPlusInside,
+	Radius,
+	ZoomIn,
+	ZoomOut,
+} from "lucide-react";
 import "maplibre-gl/dist/maplibre-gl.css";
+import type { Id } from "convex/_generated/dataModel";
 import { useMemo, useState } from "react";
 import MapLibre, {
 	type GeoJSONSourceSpecification,
@@ -18,8 +26,15 @@ import MapLibre, {
 	useMap,
 } from "react-map-gl/maplibre";
 import { Button } from "@/components/ui/button";
+import {
+	Sheet,
+	SheetContent,
+	SheetDescription,
+	SheetHeader,
+	SheetTitle,
+} from "@/components/ui/sheet";
 import { env } from "@/env";
-import { useAddPinMutation } from "@/queries";
+import { useAddPinMutation, useRemovePinMutation } from "@/queries";
 
 export const Route = createFileRoute("/map/")({
 	component: RouteComponent,
@@ -83,13 +98,20 @@ function RouteComponent() {
 	);
 }
 
+type FocusedPin = {
+	id: string;
+	creationTime: Date;
+};
+
 function MapComponent() {
 	const [disableAccuracyCircle, setDisableAccuracyCircle] = useState(true);
+	const [cursor, setCursor] = useState<string>("grab");
+	const [openRemovePinSheet, setOpenRemovePinSheet] = useState(false);
+	const [focusedPin, setFocusedPin] = useState<FocusedPin | undefined>(
+		undefined,
+	);
 
 	async function onMapClick(e: MapLayerMouseEvent) {
-		console.log(e);
-		console.log(e.features);
-
 		if (!e.features || e.features.length === 0) {
 			return;
 		}
@@ -107,7 +129,34 @@ function MapComponent() {
 					center: (feature.geometry as GeoJSON.Point).coordinates as LngLatLike,
 				});
 			}
+		} else if (feature.layer?.id === pinsUnclusteredPointLayer.id) {
+			setFocusedPin({
+				id: feature.properties?.id as string,
+				creationTime: new Date(feature.properties?.creationTime as string),
+			});
+
+			const bottomPadding = map.getContainer().clientHeight / 4;
+			map.flyTo({
+				center: (feature.geometry as GeoJSON.Point).coordinates as LngLatLike,
+				zoom: 18,
+				padding: { top: 0, bottom: bottomPadding, left: 0, right: 0 },
+			});
+			setOpenRemovePinSheet(true);
 		}
+	}
+
+	function onMouseEnter(e: MapLayerMouseEvent) {
+		const feature = e.features?.[0];
+		if (
+			feature?.layer.id === pinsClusterLayer.id ||
+			feature?.layer.id === pinsUnclusteredPointLayer.id
+		) {
+			setCursor("pointer");
+		}
+	}
+
+	function onMouseLeave() {
+		setCursor("grab");
 	}
 
 	const geolocation = useGeolocation({
@@ -158,7 +207,10 @@ function MapComponent() {
 						pinsClusterLayer.id,
 						pinsUnclusteredPointLayer.id,
 					]}
+					cursor={cursor}
 					onClick={onMapClick}
+					onMouseEnter={onMouseEnter}
+					onMouseLeave={onMouseLeave}
 				>
 					<AccuracyCricle
 						disable={disableAccuracyCircle}
@@ -181,6 +233,11 @@ function MapComponent() {
 					<AddPin geolocation={geolocation} />
 				</MapLibre>
 			</div>
+			<PinDetailsSheet
+				focusedPin={focusedPin}
+				openRemovePinSheet={openRemovePinSheet}
+				setOpenRemovePinSheet={setOpenRemovePinSheet}
+			/>
 		</div>
 	);
 }
@@ -198,6 +255,7 @@ function AddPin({ geolocation }: { geolocation: GeolocationState }) {
 	return (
 		<div className="w-full absolute inset-x-0 bottom-10 flex justify-center">
 			<Button
+				className="shadow-md"
 				onClick={() => {
 					mutation.mutate({
 						latitude: latitude,
@@ -205,7 +263,7 @@ function AddPin({ geolocation }: { geolocation: GeolocationState }) {
 					});
 				}}
 			>
-				<Pin /> Add Pin
+				<MapPinPlusInside /> Plakt hängen
 			</Button>
 		</div>
 	);
@@ -357,6 +415,7 @@ function PosterPins() {
 					},
 					properties: {
 						id: pin._id,
+						creationTime: pin._creationTime,
 					},
 				})),
 			},
@@ -377,5 +436,54 @@ function PosterPins() {
 			<Layer {...pinsClusterCountLayer} />
 			<Layer {...pinsUnclusteredPointLayer} />
 		</Source>
+	);
+}
+
+function PinDetailsSheet({
+	focusedPin,
+	openRemovePinSheet,
+	setOpenRemovePinSheet,
+}: {
+	focusedPin: FocusedPin | undefined;
+	openRemovePinSheet: boolean;
+	setOpenRemovePinSheet: (open: boolean) => void;
+}) {
+	const removePinMutation = useRemovePinMutation();
+
+	if (!focusedPin) {
+		return null;
+	}
+
+	return (
+		<Sheet
+			open={openRemovePinSheet}
+			onOpenChange={setOpenRemovePinSheet}
+			modal={false}
+		>
+			<SheetContent
+				showCloseButton={true}
+				side="bottom"
+				// onInteractOutside={(e) => e.preventDefault()}
+				className="rounded-t-md"
+			>
+				<SheetHeader>
+					<SheetTitle>Plakat</SheetTitle>
+					<SheetDescription>
+						Gehangen am {focusedPin?.creationTime.toLocaleString()}
+					</SheetDescription>
+				</SheetHeader>
+				<div className="p-4">
+					<Button
+						variant="destructive"
+						onClick={() => {
+							removePinMutation.mutate({ id: focusedPin.id as Id<"pins"> });
+							setOpenRemovePinSheet(false);
+						}}
+					>
+						<MapPinMinusInside /> Plakat abhängen
+					</Button>
+				</div>
+			</SheetContent>
+		</Sheet>
 	);
 }
