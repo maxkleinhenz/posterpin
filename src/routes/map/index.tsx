@@ -10,6 +10,7 @@ import { useMemo, useState } from "react";
 import MapLibre, {
 	type GeoJSONSourceSpecification,
 	Layer,
+	type LayerProps,
 	Marker,
 	Source,
 	useMap,
@@ -21,6 +22,41 @@ import { useAddPinMutation } from "@/queries";
 export const Route = createFileRoute("/map/")({
 	component: RouteComponent,
 });
+
+const pinsClusterLayer = {
+	id: "pins-cluster",
+	type: "circle",
+	filter: ["has", "point_count"],
+	paint: {
+		"circle-radius": ["step", ["get", "point_count"], 20, 100, 30, 750, 40],
+		"circle-color": "#fbbf24",
+		"circle-stroke-width": 2,
+		"circle-stroke-color": "#ffffff",
+	},
+} as const satisfies LayerProps;
+
+const pinsClusterCountLayer = {
+	id: "pins-cluster-count",
+	type: "symbol",
+	filter: ["has", "point_count"],
+	layout: {
+		"text-field": "{point_count_abbreviated}",
+		"text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
+		"text-size": 12,
+	},
+} as const satisfies LayerProps;
+
+const pinsUnclusteredPointLayer = {
+	id: "pins-layer-unclustered",
+	type: "circle",
+	filter: ["!", ["has", "point_count"]],
+	paint: {
+		"circle-radius": 12,
+		"circle-color": "#fbbf24",
+		"circle-stroke-width": 2,
+		"circle-stroke-color": "#ffffff",
+	},
+} as const satisfies LayerProps;
 
 // Helper function to create a circle GeoJSON
 function createGeoJSONCircle(center: [number, number], radiusInMeters: number) {
@@ -90,7 +126,10 @@ function MapComponent() {
 					keyboard={false}
 					style={{ width: "100%", height: "100%" }}
 					mapStyle={`https://api.maptiler.com/maps/streets/style.json?key=${env.VITE_MAPTILER_KEY}`}
-					interactiveLayerIds={["pins-layer"]}
+					interactiveLayerIds={[
+						pinsClusterLayer.id,
+						pinsUnclusteredPointLayer.id,
+					]}
 					onClick={(e) => {
 						console.log(e);
 						console.log(e.features);
@@ -156,6 +195,9 @@ function MapControls({
 }) {
 	const { current: map } = useMap();
 
+	const longitude = geolocation.longitude;
+	const latitude = geolocation.latitude;
+
 	return (
 		<div className="absolute top-4 right-4 flex flex-col gap-2 bg-white rounded-lg p-2 shadow-md">
 			<Button
@@ -176,7 +218,7 @@ function MapControls({
 			>
 				<ZoomOut className="size-6" />
 			</Button>
-			{geolocation.longitude != null && geolocation.latitude != null && (
+			{longitude != null && latitude != null && (
 				<Button
 					className="size-12 cursor-pointer"
 					variant="ghost"
@@ -184,10 +226,9 @@ function MapControls({
 					title="Center map"
 					onClick={() =>
 						map?.flyTo({
-							// @ts-expect-error
 							center: {
-								lng: geolocation.longitude,
-								lat: geolocation.latitude,
+								lng: longitude,
+								lat: latitude,
 							},
 							animate: true,
 						})
@@ -300,17 +341,16 @@ function PosterPins() {
 	if (!pinsGeoJSON) return null;
 
 	return (
-		<Source id="pins-source" {...pinsGeoJSON}>
-			<Layer
-				id="pins-layer"
-				type="circle"
-				paint={{
-					"circle-radius": 8,
-					"circle-color": "#fbbf24",
-					"circle-stroke-width": 2,
-					"circle-stroke-color": "#ffffff",
-				}}
-			/>
+		<Source
+			id="pins-source"
+			cluster={true}
+			clusterMaxZoom={16}
+			clusterRadius={30}
+			{...pinsGeoJSON}
+		>
+			<Layer {...pinsClusterLayer} />
+			<Layer {...pinsClusterCountLayer} />
+			<Layer {...pinsUnclusteredPointLayer} />
 		</Source>
 	);
 }
