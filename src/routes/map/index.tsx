@@ -11,6 +11,8 @@ import MapLibre, {
 	type GeoJSONSourceSpecification,
 	Layer,
 	type LayerProps,
+	type LngLatLike,
+	type MapLayerMouseEvent,
 	Marker,
 	Source,
 	useMap,
@@ -22,6 +24,8 @@ import { useAddPinMutation } from "@/queries";
 export const Route = createFileRoute("/map/")({
 	component: RouteComponent,
 });
+
+const pinSourceId = "pins-source";
 
 const pinsClusterLayer = {
 	id: "pins-cluster",
@@ -82,6 +86,30 @@ function RouteComponent() {
 function MapComponent() {
 	const [disableAccuracyCircle, setDisableAccuracyCircle] = useState(true);
 
+	async function onMapClick(e: MapLayerMouseEvent) {
+		console.log(e);
+		console.log(e.features);
+
+		if (!e.features || e.features.length === 0) {
+			return;
+		}
+
+		const map = e.target;
+		const feature = e.features[0];
+
+		if (feature.layer?.id === pinsClusterLayer.id) {
+			const clusterId = feature.properties?.cluster_id as number;
+			if (clusterId) {
+				const source = map.getSource(pinSourceId) as maplibregl.GeoJSONSource;
+				const zoom = await source.getClusterExpansionZoom(clusterId);
+				map.easeTo({
+					zoom,
+					center: (feature.geometry as GeoJSON.Point).coordinates as LngLatLike,
+				});
+			}
+		}
+	}
+
 	const geolocation = useGeolocation({
 		enableHighAccuracy: true,
 		maximumAge: 10000,
@@ -130,10 +158,7 @@ function MapComponent() {
 						pinsClusterLayer.id,
 						pinsUnclusteredPointLayer.id,
 					]}
-					onClick={(e) => {
-						console.log(e);
-						console.log(e.features);
-					}}
+					onClick={onMapClick}
 				>
 					<AccuracyCricle
 						disable={disableAccuracyCircle}
@@ -342,7 +367,7 @@ function PosterPins() {
 
 	return (
 		<Source
-			id="pins-source"
+			id={pinSourceId}
 			cluster={true}
 			clusterMaxZoom={16}
 			clusterRadius={30}
