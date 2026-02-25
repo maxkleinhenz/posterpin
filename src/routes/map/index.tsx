@@ -162,7 +162,7 @@ function MapComponent() {
 						}
 					/>
 					<PinControl geolocation={geolocation} />
-					<MenuSheet />
+					<MenuSheet focusedPin={focusedPin} />
 				</MapLibre>
 			</div>
 			<PinDetailsSheet
