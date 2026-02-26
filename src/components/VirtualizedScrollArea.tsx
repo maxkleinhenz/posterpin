@@ -10,7 +10,6 @@ interface VirtualizedScrollAreaProps<T> {
 	overscan?: number;
 	estimateSize: (index: number) => number;
 	getItemKey?: (index: number) => string | number;
-	listHeight: string;
 	className?: string;
 	initialScroll?: {
 		index: number;
@@ -34,7 +33,6 @@ function VirtualizedScrollArea<T extends object>({
 	overscan = 5,
 	estimateSize,
 	getItemKey,
-	listHeight,
 	initialScroll,
 	className,
 	...props

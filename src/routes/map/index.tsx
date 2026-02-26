@@ -7,13 +7,14 @@ import MapLibre, {
 	type MapLayerMouseEvent,
 	Marker,
 } from "react-map-gl/maplibre";
+import { useShallow } from "zustand/react/shallow";
 import { env } from "@/env";
 import { pinQueries } from "@/queries";
+import { useAppStore } from "@/store/app-store";
 import AccuracyCricle from "./-components/map-accuracy-cricle";
 import MapControls from "./-components/map-control";
 import MenuSheet from "./-components/menu-sheet";
 import PinControl from "./-components/pin-control";
-import type { FocusedPin } from "./-components/pin-details-sheet";
 import PinDetailsSheet from "./-components/pin-details-sheet";
 import PinsLayer, {
 	pinSourceId,
@@ -39,8 +40,10 @@ function RouteComponent() {
 function MapComponent() {
 	const [disableAccuracyCircle, setDisableAccuracyCircle] = useState(true);
 	const [cursor, setCursor] = useState<string>("grab");
-	const [focusedPin, setFocusedPin] = useState<FocusedPin | undefined>(
-		undefined,
+	const { setMode } = useAppStore(
+		useShallow((state) => ({
+			setMode: state.setMode,
+		})),
 	);
 
 	async function onMapClick(e: MapLayerMouseEvent) {
@@ -62,9 +65,12 @@ function MapComponent() {
 				});
 			}
 		} else if (feature.layer?.id === pinsUnclusteredPointLayer.id) {
-			setFocusedPin({
-				id: feature.properties?.id as string,
-				creationTime: new Date(feature.properties?.creationTime as string),
+			setMode({
+				mode: "focused-pin",
+				focusedPin: {
+					id: feature.properties?.id as string,
+					creationTime: new Date(feature.properties?.creationTime as string),
+				},
 			});
 
 			const bottomPadding = map.getContainer().clientHeight / 4;
@@ -162,13 +168,10 @@ function MapComponent() {
 						}
 					/>
 					<PinControl geolocation={geolocation} />
-					<MenuSheet focusedPin={focusedPin} />
+					<MenuSheet />
 				</MapLibre>
 			</div>
-			<PinDetailsSheet
-				focusedPin={focusedPin}
-				onClose={() => setFocusedPin(undefined)}
-			/>
+			<PinDetailsSheet />
 		</div>
 	);
 }

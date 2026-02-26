@@ -1,20 +1,20 @@
 import { useMediaQuery } from "@uidotdev/usehooks";
-import { Focus, MapPinMinusInside, Menu, X } from "lucide-react";
+import { Focus, MapPinMinusInside, Menu } from "lucide-react";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useQuery } from "@tanstack/react-query";
 import type { Id } from "convex/_generated/dataModel";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMap } from "react-map-gl/maplibre";
-import { cn } from "src/lib/utils";
+import { useShallow } from "zustand/react/shallow";
 import { Button } from "@/components/ui/button";
 import {
-	Drawer,
-	DrawerContent,
-	DrawerDescription,
-	DrawerHeader,
-	DrawerTitle,
-	DrawerTrigger,
-} from "@/components/ui/drawer";
+	Sheet,
+	SheetContent,
+	SheetDescription,
+	SheetHeader,
+	SheetTitle,
+	SheetTrigger,
+} from "@/components/ui/sheet";
 import {
 	Tooltip,
 	TooltipContent,
@@ -22,11 +22,9 @@ import {
 } from "@/components/ui/tooltip";
 import { VirtualizedScrollArea } from "@/components/VirtualizedScrollArea";
 import { pinQueries, useRemovePinMutation } from "@/queries";
-import type { FocusedPin } from "./pin-details-sheet";
+import { useAppStore } from "@/store/app-store";
 
-const snapPoints = [0.8, 1];
-
-export default function MenuSheet({ focusedPin }: { focusedPin?: FocusedPin }) {
+export default function MenuSheet() {
 	const { current: map } = useMap();
 
 	const list = useQuery(pinQueries.list());
@@ -34,20 +32,16 @@ export default function MenuSheet({ focusedPin }: { focusedPin?: FocusedPin }) {
 	const isSmallDevice = useMediaQuery("only screen and (max-width : 768px)");
 
 	const [open, setOpen] = useState(false);
-	const [snap, setSnap] = useState<number | string | null>(snapPoints[0]);
-
-	useEffect(() => {
-		if (focusedPin?.id) {
-			setOpen(false);
-		}
-	}, [focusedPin?.id]);
+	const { setMode } = useAppStore(
+		useShallow((state) => ({ setMode: state.setMode })),
+	);
 
 	function flyToPin(pin: { latitude: number; longitude: number }) {
 		if (!map) return;
 		const padding = isSmallDevice
 			? {
 					top: 0,
-					bottom: map.getContainer().clientHeight * Number(snap) * 0.8, // shadcn caps height at 80vh
+					bottom: map.getContainer().clientHeight * 0.8, // shadcn caps height at 80vh
 					left: 0,
 					right: 0,
 				}
@@ -69,38 +63,45 @@ export default function MenuSheet({ focusedPin }: { focusedPin?: FocusedPin }) {
 
 	return (
 		<div className="absolute top-2 left-2 grid gap-2">
-			<Drawer
+			<Sheet
 				modal={false}
 				open={open}
-				onOpenChange={setOpen}
-				direction={isSmallDevice ? "bottom" : "left"}
-				snapPoints={isSmallDevice ? snapPoints : undefined}
-				activeSnapPoint={snap}
-				setActiveSnapPoint={setSnap}
+				onOpenChange={(o) => {
+					if (!o) setMode({ mode: "none" });
+					setOpen(o);
+				}}
 			>
 				<Tooltip>
 					<TooltipTrigger asChild>
-						<DrawerTrigger asChild>
-							{/* Menu */}
+						{/* Menu */}
+						<SheetTrigger asChild>
 							<Button
 								className="cursor-pointer min-h-13 min-w-13"
 								variant="outline"
+								onClick={() => {
+									setMode({ mode: "menu" });
+								}}
 							>
 								<Menu className="size-5" />
 								<span className="sr-only">Menü</span>
 							</Button>
-						</DrawerTrigger>
+						</SheetTrigger>
 					</TooltipTrigger>
 					<TooltipContent className="px-2 py-1 text-xs" side="right">
 						Menü
 					</TooltipContent>
 				</Tooltip>
-				<DrawerContent className={cn("rounded-t-md w-full md:w-96 md:h-dvh")}>
-					<DrawerHeader className="relative">
-						<DrawerTitle>Kampagne</DrawerTitle>
-						<DrawerDescription>Details zur Kampagne</DrawerDescription>
+				<SheetContent
+					className="rounded-t-md w-full md:w-96 h-[80dvh] md:h-dvh"
+					side={isSmallDevice ? "bottom" : "left"}
+				>
+					<SheetHeader>
+						<SheetTitle>Kampagne</SheetTitle>
+						<SheetDescription>
+							Insgesamt {list.data.length} Plakate
+						</SheetDescription>
 
-						<Button
+						{/* <Button
 							className="absolute top-2 right-2 rounded-md"
 							variant="ghost"
 							size="icon"
@@ -109,19 +110,13 @@ export default function MenuSheet({ focusedPin }: { focusedPin?: FocusedPin }) {
 							}}
 						>
 							<X />
-						</Button>
-					</DrawerHeader>
+						</Button> */}
+					</SheetHeader>
 					<div className="grid grid-rows-[auto_auto_1fr] gap-2 overflow-hidden">
-						<div className="px-4 text-muted-foreground line-clamp-2 text-end text-sm leading-normal font-normal">
-							Insgesamt {list.data.length} Plakate
-						</div>
 						<VirtualizedScrollArea
-							className={cn("px-4", {
-								"h-4/5": isSmallDevice && snap === snapPoints[0],
-							})}
+							className="px-4"
 							items={list.data}
-							estimateSize={() => 57}
-							listHeight="100%"
+							estimateSize={() => 56}
 							renderItem={(item) => (
 								<div className="grid grid-cols-[1fr_auto] gap-4 p-2 rounded-md">
 									<div>
@@ -178,8 +173,8 @@ export default function MenuSheet({ focusedPin }: { focusedPin?: FocusedPin }) {
 							)}
 						/>
 					</div>
-				</DrawerContent>
-			</Drawer>
+				</SheetContent>
+			</Sheet>
 		</div>
 	);
 }
