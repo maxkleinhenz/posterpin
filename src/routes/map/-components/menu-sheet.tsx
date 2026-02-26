@@ -1,12 +1,20 @@
 import { useMediaQuery } from "@uidotdev/usehooks";
-import { Focus, MapPinMinusInside, Menu } from "lucide-react";
+import {
+	Focus,
+	MapPinCheckInside,
+	MapPinMinusInside,
+	MapPinOff,
+	Menu,
+} from "lucide-react";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useQuery } from "@tanstack/react-query";
 import type { Id } from "convex/_generated/dataModel";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMap } from "react-map-gl/maplibre";
 import { useShallow } from "zustand/react/shallow";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import {
 	Sheet,
 	SheetContent,
@@ -21,20 +29,33 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { VirtualizedScrollArea } from "@/components/VirtualizedScrollArea";
-import { pinQueries, useRemovePinMutation } from "@/queries";
+import {
+	pinQueries,
+	useHangAgainPinMutation,
+	useTakeDownPinMutation,
+} from "@/queries";
 import { useAppStore } from "@/store/app-store";
 
 export default function MenuSheet() {
 	const { current: map } = useMap();
 
 	const list = useQuery(pinQueries.list());
-	const removePinMutation = useRemovePinMutation();
+	const takeDownPinMutation = useTakeDownPinMutation();
+	const hangAgainPinMutation = useHangAgainPinMutation();
 	const isSmallDevice = useMediaQuery("only screen and (max-width : 768px)");
 
 	const [open, setOpen] = useState(false);
+	const [showOnlyHangedPins, setShowOnlyHangedPins] = useState(false);
 	const { setMode } = useAppStore(
 		useShallow((state) => ({ setMode: state.setMode })),
 	);
+
+	const pins = useMemo(() => {
+		if (!list.data) return [];
+		return showOnlyHangedPins
+			? list.data.filter((pin) => pin.tookDownAt === null)
+			: list.data;
+	}, [list.data, showOnlyHangedPins]);
 
 	function flyToPin(pin: { latitude: number; longitude: number }) {
 		if (!map) return;
@@ -58,8 +79,6 @@ export default function MenuSheet() {
 			padding: padding,
 		});
 	}
-
-	if (!list.data) return null;
 
 	return (
 		<div className="absolute top-2 left-2 grid gap-2">
@@ -97,37 +116,57 @@ export default function MenuSheet() {
 				>
 					<SheetHeader>
 						<SheetTitle>Kampagne</SheetTitle>
-						<SheetDescription>
-							Insgesamt {list.data.length} Plakate
-						</SheetDescription>
-
-						{/* <Button
-							className="absolute top-2 right-2 rounded-md"
-							variant="ghost"
-							size="icon"
-							onClick={() => {
-								setOpen(false);
-							}}
-						>
-							<X />
-						</Button> */}
+						<SheetDescription>Insgesamt {pins.length} Plakate</SheetDescription>
 					</SheetHeader>
+					<div className="px-4">
+						<Label>
+							<Checkbox
+								checked={showOnlyHangedPins}
+								onCheckedChange={(e) =>
+									e === true
+										? setShowOnlyHangedPins(true)
+										: setShowOnlyHangedPins(false)
+								}
+							/>
+							Nur aufgehängte Plakate anzeigen
+						</Label>
+					</div>
+
 					<div className="grid grid-rows-[auto_auto_1fr] gap-2 overflow-hidden">
 						<VirtualizedScrollArea
 							className="px-4"
-							items={list.data}
+							items={pins}
 							estimateSize={() => 56}
 							renderItem={(item) => (
 								<div className="grid grid-cols-[1fr_auto] gap-4 p-2 rounded-md">
-									<div>
-										<p className="line-clamp-1 text-sm leading-snug font-medium underline-offset-4">
-											Plakat
-										</p>
-										<p className="text-muted-foreground line-clamp-2 text-left text-sm leading-normal font-normal">
-											Gehangen am{" "}
-											{new Date(item?._creationTime ?? "").toLocaleString()}
-										</p>
-									</div>
+									{item.tookDownAt == null ? (
+										<div>
+											<div className="flex gap-1 items-center">
+												<MapPinCheckInside className="size-5" />
+												<p className="line-clamp-1 text-sm leading-snug font-medium underline-offset-4">
+													Plakat
+												</p>
+											</div>
+											<p className="text-muted-foreground line-clamp-2 text-left text-sm leading-normal font-normal">
+												Gehangen am{" "}
+												{new Date(item?.hangAt ?? "").toLocaleString()}
+											</p>
+										</div>
+									) : (
+										<div className="text-muted-foreground">
+											<div className="flex gap-1 items-center">
+												<MapPinOff className=" size-5" />
+												<p className="line-clamp-1 text-sm leading-snug font-medium underline-offset-4 line-through">
+													Plakat
+												</p>
+											</div>
+											<p className="line-clamp-2 text-left text-sm leading-normal font-normal">
+												Abgenommen am{" "}
+												{new Date(item?.tookDownAt ?? "").toLocaleString()}
+											</p>
+										</div>
+									)}
+
 									<div className="inline-flex w-fit -space-x-px rounded-md rtl:space-x-reverse">
 										<Tooltip>
 											<TooltipTrigger asChild>
@@ -149,25 +188,51 @@ export default function MenuSheet() {
 												Zentriere Plakat
 											</TooltipContent>
 										</Tooltip>
-										<Tooltip>
-											<TooltipTrigger asChild>
-												<Button
-													className="rounded-none rounded-r-md shadow-none focus-visible:z-10"
-													variant="outline"
-													onClick={() =>
-														removePinMutation.mutate({
-															id: item._id as Id<"pins">,
-														})
-													}
-												>
-													<MapPinMinusInside />
-													<span className="sr-only">Plakat abhängen</span>
-												</Button>
-											</TooltipTrigger>
-											<TooltipContent className="px-2 py-1 text-xs">
-												Plakat abhängen
-											</TooltipContent>
-										</Tooltip>
+										{item.tookDownAt == null ? (
+											<Tooltip>
+												<TooltipTrigger asChild>
+													<Button
+														className="rounded-none rounded-r-md shadow-none focus-visible:z-10"
+														variant="outline"
+														onClick={() =>
+															takeDownPinMutation.mutate({
+																id: item._id as Id<"pins">,
+																tookDownAt: Date.now(),
+															})
+														}
+													>
+														<MapPinMinusInside />
+														<span className="sr-only">Plakat abhängen</span>
+													</Button>
+												</TooltipTrigger>
+												<TooltipContent className="px-2 py-1 text-xs">
+													Plakat abhängen
+												</TooltipContent>
+											</Tooltip>
+										) : (
+											<Tooltip>
+												<TooltipTrigger asChild>
+													<Button
+														className="rounded-none rounded-r-md shadow-none focus-visible:z-10"
+														variant="outline"
+														onClick={() =>
+															hangAgainPinMutation.mutate({
+																id: item._id as Id<"pins">,
+																hangAt: Date.now(),
+															})
+														}
+													>
+														<MapPinCheckInside />
+														<span className="sr-only">
+															Plakat wieder aufhängen
+														</span>
+													</Button>
+												</TooltipTrigger>
+												<TooltipContent className="px-2 py-1 text-xs">
+													Plakat wieder aufhängen
+												</TooltipContent>
+											</Tooltip>
+										)}
 									</div>
 								</div>
 							)}

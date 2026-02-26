@@ -37,12 +37,25 @@ export const pinsClusterCountLayer = {
 export const pinsUnclusteredPointLayer = {
 	id: "pins-layer-unclustered",
 	type: "circle",
-	filter: ["!", ["has", "point_count"]],
+	filter: ["all", ["!", ["has", "point_count"]], ["==", ["get", "tookDownAt"], null]],
 	paint: {
 		"circle-radius": 18,
 		"circle-color": "#fbbf24",
 		"circle-stroke-width": 2,
 		"circle-stroke-color": "#ffffff",
+	},
+} as const satisfies LayerProps;
+
+export const pinsTookDownLayer = {
+	id: "pins-layer-took-down",
+	type: "circle",
+	filter: ["all", ["!", ["has", "point_count"]], ["!=", ["get", "tookDownAt"], null]],
+	paint: {
+		"circle-radius": 18,
+		"circle-color": "#9ca3af",
+		"circle-stroke-width": 2,
+		"circle-stroke-color": "#ffffff",
+		"circle-opacity": 0.6,
 	},
 } as const satisfies LayerProps;
 
@@ -64,7 +77,8 @@ export default function PinsLayer() {
 					},
 					properties: {
 						id: pin._id,
-						creationTime: pin._creationTime,
+						hangAt: pin.hangAt,
+						tookDownAt: pin.tookDownAt ?? null,
 					},
 				})),
 			},
@@ -84,6 +98,7 @@ export default function PinsLayer() {
 			<Layer {...pinsClusterLayer} />
 			<Layer {...pinsClusterCountLayer} />
 			<Layer {...pinsUnclusteredPointLayer} />
+			<Layer {...pinsTookDownLayer} />
 		</Source>
 	);
 }

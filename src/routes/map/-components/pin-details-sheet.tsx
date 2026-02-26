@@ -1,4 +1,4 @@
-import { MapPinMinusInside } from "lucide-react";
+import { MapPinCheckInside, MapPinMinusInside } from "lucide-react";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { Id } from "convex/_generated/dataModel";
@@ -12,11 +12,12 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
-import { useRemovePinMutation } from "@/queries";
+import { useHangAgainPinMutation, useTakeDownPinMutation } from "@/queries";
 import { useAppStore } from "@/store/app-store";
 
 export default function PinDetailsSheet() {
-	const removePinMutation = useRemovePinMutation();
+	const takePinDownMutation = useTakeDownPinMutation();
+	const hangAgainPinMutation = useHangAgainPinMutation();
 
 	const [open, setOpen] = useState(false);
 	const { mode, setMode } = useAppStore(
@@ -50,19 +51,37 @@ export default function PinDetailsSheet() {
 				<SheetHeader>
 					<SheetTitle>Plakat</SheetTitle>
 					<SheetDescription>
-						Gehangen am {focusedPin?.creationTime.toLocaleString()}
+						{focusedPin?.tookDownAt != null
+							? `Abgehangen am ${focusedPin.tookDownAt.toLocaleString()}`
+							: `Gehangen am ${focusedPin?.hangAt.toLocaleString()}`}
 					</SheetDescription>
 				</SheetHeader>
 				<div className="p-4">
-					{focusedPin != null && (
+					{focusedPin == null ? null : focusedPin.tookDownAt == null ? (
 						<Button
 							variant="destructive"
 							onClick={() => {
-								removePinMutation.mutate({ id: focusedPin.id as Id<"pins"> });
+								takePinDownMutation.mutate({
+									id: focusedPin.id as Id<"pins">,
+									tookDownAt: Date.now(),
+								});
 								close();
 							}}
 						>
 							<MapPinMinusInside /> Plakat abhängen
+						</Button>
+					) : (
+						<Button
+							variant="default"
+							onClick={() => {
+								hangAgainPinMutation.mutate({
+									id: focusedPin.id as Id<"pins">,
+									hangAt: Date.now(),
+								});
+								close();
+							}}
+						>
+							<MapPinCheckInside /> Plakat wieder aufhängen
 						</Button>
 					)}
 				</div>

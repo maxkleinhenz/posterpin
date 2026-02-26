@@ -14,7 +14,8 @@ export type Mode =
 
 export type FocusedPin = {
 	id: string;
-	creationTime: Date;
+	hangAt: Date;
+	tookDownAt: Date | null;
 };
 
 interface AppState {

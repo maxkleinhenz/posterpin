@@ -6,7 +6,9 @@ const schema = defineSchema({
   pins: defineTable({
     longitude: v.number(),
     latitude: v.number(),
-  }),
+    hangAt: v.optional(v.nullable(v.number())),
+    tookDownAt: v.optional(v.nullable(v.number())),
+  }).index('by_hang_at', ['hangAt']),
   products: defineTable({
     title: v.string(),
     imageId: v.string(),
@@ -30,9 +32,16 @@ export const insertPinSchema = v.object({
 })
 export type InsertPin = Infer<typeof insertPinSchema>
 
-export const removePinSchema = v.object({
+export const takePinDownSchema = v.object({
   id: v.id('pins'),
+  tookDownAt: v.number(),
 })
-export type RemovePin = Infer<typeof removePinSchema>
+export type TakePinDown = Infer<typeof takePinDownSchema>
+
+export const hangPinAgainDownSchema = v.object({
+  id: v.id('pins'),
+  hangAt: v.number(),
+})
+export type HangPinAgain = Infer<typeof hangPinAgainDownSchema>
 
 

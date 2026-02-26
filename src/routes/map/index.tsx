@@ -19,8 +19,15 @@ import PinDetailsSheet from "./-components/pin-details-sheet";
 import PinsLayer, {
 	pinSourceId,
 	pinsClusterLayer,
+	pinsTookDownLayer,
 	pinsUnclusteredPointLayer,
 } from "./-components/pin-layer";
+
+const interactiveLayerIds = [
+	pinsClusterLayer.id,
+	pinsUnclusteredPointLayer.id,
+	pinsTookDownLayer.id,
+] as const;
 
 export const Route = createFileRoute("/map/")({
 	component: RouteComponent,
@@ -64,12 +71,19 @@ function MapComponent() {
 					center: (feature.geometry as GeoJSON.Point).coordinates as LngLatLike,
 				});
 			}
-		} else if (feature.layer?.id === pinsUnclusteredPointLayer.id) {
+		} else if (
+			feature.layer?.id === pinsUnclusteredPointLayer.id ||
+			feature.layer?.id === pinsTookDownLayer.id
+		) {
 			setMode({
 				mode: "focused-pin",
 				focusedPin: {
 					id: feature.properties?.id as string,
-					creationTime: new Date(feature.properties?.creationTime as string),
+					hangAt: new Date(feature.properties?.hangAt as number),
+					tookDownAt:
+						feature.properties?.tookDownAt != null
+							? new Date(feature.properties.tookDownAt as number)
+							: null,
 				},
 			});
 
@@ -84,10 +98,7 @@ function MapComponent() {
 
 	function onMouseEnter(e: MapLayerMouseEvent) {
 		const feature = e.features?.[0];
-		if (
-			feature?.layer.id === pinsClusterLayer.id ||
-			feature?.layer.id === pinsUnclusteredPointLayer.id
-		) {
+		if (interactiveLayerIds.some((layerId) => layerId === feature?.layer.id)) {
 			setCursor("pointer");
 		}
 	}
@@ -140,10 +151,7 @@ function MapComponent() {
 					keyboard={false}
 					style={{ width: "100%", height: "100%" }}
 					mapStyle={`https://api.maptiler.com/maps/streets/style.json?key=${env.VITE_MAPTILER_KEY}`}
-					interactiveLayerIds={[
-						pinsClusterLayer.id,
-						pinsUnclusteredPointLayer.id,
-					]}
+					interactiveLayerIds={interactiveLayerIds as unknown as string[]}
 					cursor={cursor}
 					onClick={onMapClick}
 					onMouseEnter={onMouseEnter}
