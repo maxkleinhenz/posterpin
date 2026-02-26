@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "npx convex dev --once && concurrently -r npm:dev:web npm:dev:db",
     "dev:web": "vite dev",
-    "dev:db": "convex dev --run pins:seed",
+    "dev:db": "convex dev --run campaigns:seed --run pins:seed ",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",

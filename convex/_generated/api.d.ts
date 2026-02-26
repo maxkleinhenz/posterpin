@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as campaigns from "../campaigns.js";
 import type * as migrations from "../migrations.js";
 import type * as pins from "../pins.js";
 import type * as todos from "../todos.js";
@@ -19,6 +20,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  campaigns: typeof campaigns;
   migrations: typeof migrations;
   pins: typeof pins;
   todos: typeof todos;
