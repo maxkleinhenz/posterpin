@@ -1,5 +1,5 @@
 import type { GeolocationState } from "@uidotdev/usehooks";
-import { LocateFixed, Radius, ZoomIn, ZoomOut } from "lucide-react";
+import { LocateFixed, Settings, ZoomIn, ZoomOut } from "lucide-react";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useMap } from "react-map-gl/maplibre";
 import { Button } from "@/components/ui/button";
@@ -22,82 +22,85 @@ export default function MapControls({
 	const latitude = geolocation.latitude;
 
 	return (
-		<div className="absolute top-2 right-2 grid gap-2 bg-background p-2 rounded-md shadow-md">
-			<Tooltip>
-				<TooltipTrigger asChild>
-					<Button
-						className="p-2 cursor-pointer"
-						variant="ghost"
-						size="icon"
-						onClick={() => map?.zoomIn({ animate: true })}
-					>
-						<ZoomIn className="size-5" />
-						<span className="sr-only">Hineinzoom</span>
-					</Button>
-				</TooltipTrigger>
-				<TooltipContent className="px-2 py-1 text-xs" side="left">
-					Hineinzoom
-				</TooltipContent>
-			</Tooltip>
-			<Tooltip>
-				<TooltipTrigger asChild>
-					<Button
-						className="p-2 cursor-pointer"
-						variant="ghost"
-						size="icon"
-						onClick={() => map?.zoomOut({ animate: true })}
-					>
-						<ZoomOut className="size-5" />
-						<span className="sr-only">Herauszoom</span>
-					</Button>
-				</TooltipTrigger>
-				<TooltipContent className="px-2 py-1 text-xs" side="left">
-					Hineinzoom
-				</TooltipContent>
-			</Tooltip>
-			{longitude != null && latitude != null && (
+		<div className="absolute bottom-10 right-2 grid gap-2">
+			<div className="grid gap-2 p-1 bg-background rounded-md shadow-md">
 				<Tooltip>
 					<TooltipTrigger asChild>
 						<Button
-							className="p-2 cursor-pointer"
+							className="p-5"
 							variant="ghost"
-							size="icon"
-							onClick={() =>
-								map?.flyTo({
-									center: {
-										lng: longitude,
-										lat: latitude,
-									},
-									animate: true,
-								})
-							}
+							size="icon-lg"
+							onClick={toggleaAcuracyCircle}
 						>
-							<LocateFixed className="size-5" />
-							<span className="sr-only">Zentriere Karte</span>
+							<Settings className="size-5" />
+							<span className="sr-only">Toogle Genauigkeitskreis</span>
 						</Button>
 					</TooltipTrigger>
 					<TooltipContent className="px-2 py-1 text-xs" side="left">
-						Zentriere Karte
+						Toogle Genauigkeitskreis
 					</TooltipContent>
 				</Tooltip>
-			)}
-
-			<Tooltip>
-				<TooltipTrigger asChild>
-					<Button
-						className="p-2 cursor-pointer"
-						variant="ghost"
-						size="icon"
-						onClick={toggleaAcuracyCircle}
-					>
-						<Radius className="size-5" />
-						<span className="sr-only">Toogle Genauigkeitskreis</span>
-					</Button>
-				</TooltipTrigger>
-				<TooltipContent className="px-2 py-1 text-xs" side="left">
-					Toogle Genauigkeitskreis
-				</TooltipContent>
-			</Tooltip>
+			</div>
+			<div className="grid gap-2 p-1 bg-background rounded-md shadow-md">
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<Button
+							className="p-5"
+							variant="ghost"
+							size="icon-lg"
+							onClick={() => map?.zoomIn({ animate: true })}
+						>
+							<ZoomIn className="size-5" />
+							<span className="sr-only">Hineinzoom</span>
+						</Button>
+					</TooltipTrigger>
+					<TooltipContent className="px-2 py-1 text-xs" side="left">
+						Hineinzoom
+					</TooltipContent>
+				</Tooltip>
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<Button
+							className="p-5"
+							variant="ghost"
+							size="icon-lg"
+							onClick={() => map?.zoomOut({ animate: true })}
+						>
+							<ZoomOut className="size-5" />
+							<span className="sr-only">Herauszoom</span>
+						</Button>
+					</TooltipTrigger>
+					<TooltipContent className="px-2 py-1 text-xs" side="left">
+						Hineinzoom
+					</TooltipContent>
+				</Tooltip>
+				{longitude != null && latitude != null && (
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<Button
+								className="p-5"
+								variant="ghost"
+								size="icon-lg"
+								onClick={() =>
+									map?.flyTo({
+										center: {
+											lng: longitude,
+											lat: latitude,
+										},
+										animate: true,
+									})
+								}
+							>
+								<LocateFixed className="size-5" />
+								<span className="sr-only">Zentriere Karte</span>
+							</Button>
+						</TooltipTrigger>
+						<TooltipContent className="px-2 py-1 text-xs" side="left">
+							Zentriere Karte
+						</TooltipContent>
+					</Tooltip>
+				)}
+			</div>
 		</div>
 	);
 }

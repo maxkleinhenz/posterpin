@@ -1,7 +1,7 @@
 import type { GeolocationState } from "@uidotdev/usehooks";
-import { MapPinPlusInside } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useAddPinMutation } from "@/queries";
+import { AddPin } from "@/icons";
+import { useAddPinMutation } from "@/queries/pins";
 
 export default function PinControl({
 	geolocation,
@@ -18,9 +18,10 @@ export default function PinControl({
 	}
 
 	return (
-		<div className="flex gap-2 w-full absolute inset-x-0 bottom-10 justify-center">
+		<div className="flex gap-2 absolute left-1/2 -translate-x-1/2 bottom-10 justify-center">
 			<Button
-				className="shadow-md"
+				className="shadow-md p-6"
+				size="lg"
 				onClick={() => {
 					mutation.mutate({
 						latitude: latitude,
@@ -28,7 +29,7 @@ export default function PinControl({
 					});
 				}}
 			>
-				<MapPinPlusInside /> Plakt hängen
+				<AddPin className="size-5" /> Plakat hängen
 			</Button>
 		</div>
 	);

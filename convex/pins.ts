@@ -1,5 +1,5 @@
 import { internalMutation, mutation, query } from "./_generated/server"
-import { hangPinAgainDownSchema as hangPinAgainSchema, insertPinSchema, takePinDownSchema } from "./schema"
+import { hangPinAgainSchema, insertPinSchema, takePinDownSchema } from "./schema"
 
 export const seed = internalMutation(async (ctx) => {
   const allBoards = await ctx.db.query('pins').collect()
@@ -24,7 +24,6 @@ export const list = query({
       .collect()
   },
 })
-
 
 export const add = mutation({
   args: insertPinSchema,

@@ -1,15 +1,9 @@
 import { useMediaQuery } from "@uidotdev/usehooks";
-import {
-	Focus,
-	MapPinCheckInside,
-	MapPinMinusInside,
-	MapPinOff,
-	Menu,
-} from "lucide-react";
+import { Focus, Menu } from "lucide-react";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useQuery } from "@tanstack/react-query";
 import type { Id } from "convex/_generated/dataModel";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useMap } from "react-map-gl/maplibre";
 import { useShallow } from "zustand/react/shallow";
 import { Button } from "@/components/ui/button";
@@ -29,11 +23,12 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { VirtualizedScrollArea } from "@/components/VirtualizedScrollArea";
+import { AddPin, PinMarker, PinMarkerOff, RemovePin } from "@/icons";
 import {
 	pinQueries,
 	useHangAgainPinMutation,
 	useTakeDownPinMutation,
-} from "@/queries";
+} from "@/queries/pins";
 import { useAppStore } from "@/store/app-store";
 
 export default function MenuSheet() {
@@ -81,7 +76,7 @@ export default function MenuSheet() {
 	}
 
 	return (
-		<div className="absolute top-2 left-2 grid gap-2">
+		<div className="absolute bottom-10 left-2 grid gap-2">
 			<Sheet
 				modal={false}
 				open={open}
@@ -95,7 +90,8 @@ export default function MenuSheet() {
 						{/* Menu */}
 						<SheetTrigger asChild>
 							<Button
-								className="cursor-pointer min-h-13 min-w-13"
+								className="p-6"
+								size="icon-lg"
 								variant="outline"
 								onClick={() => {
 									setMode({ mode: "menu" });
@@ -142,7 +138,7 @@ export default function MenuSheet() {
 									{item.tookDownAt == null ? (
 										<div>
 											<div className="flex gap-1 items-center">
-												<MapPinCheckInside className="size-5" />
+												<PinMarker className="size-5" />
 												<p className="line-clamp-1 text-sm leading-snug font-medium underline-offset-4">
 													Plakat
 												</p>
@@ -155,7 +151,7 @@ export default function MenuSheet() {
 									) : (
 										<div className="text-muted-foreground">
 											<div className="flex gap-1 items-center">
-												<MapPinOff className=" size-5" />
+												<PinMarkerOff className=" size-5" />
 												<p className="line-clamp-1 text-sm leading-snug font-medium underline-offset-4 line-through">
 													Plakat
 												</p>
@@ -201,7 +197,7 @@ export default function MenuSheet() {
 															})
 														}
 													>
-														<MapPinMinusInside />
+														<RemovePin />
 														<span className="sr-only">Plakat abhängen</span>
 													</Button>
 												</TooltipTrigger>
@@ -222,7 +218,7 @@ export default function MenuSheet() {
 															})
 														}
 													>
-														<MapPinCheckInside />
+														<AddPin />
 														<span className="sr-only">
 															Plakat wieder aufhängen
 														</span>

@@ -2,8 +2,8 @@ import { convexQuery } from "@convex-dev/react-query";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useConvex } from "convex/react";
 import type { HangPinAgain, InsertPin, Pin, TakePinDown } from "convex/schema";
-import { api } from "../convex/_generated/api";
-import type { Id } from "../convex/_generated/dataModel";
+import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
 
 export const pinQueries = {
 	list: () => convexQuery(api.pins.list, {}),

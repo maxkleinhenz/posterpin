@@ -1,4 +1,3 @@
-import { MapPinCheckInside, MapPinMinusInside } from "lucide-react";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { Id } from "convex/_generated/dataModel";
@@ -12,7 +11,11 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
-import { useHangAgainPinMutation, useTakeDownPinMutation } from "@/queries";
+import { AddPin, RemovePin } from "@/icons";
+import {
+	useHangAgainPinMutation,
+	useTakeDownPinMutation,
+} from "@/queries/pins";
 import { useAppStore } from "@/store/app-store";
 
 export default function PinDetailsSheet() {
@@ -68,7 +71,7 @@ export default function PinDetailsSheet() {
 								close();
 							}}
 						>
-							<MapPinMinusInside /> Plakat abhängen
+							<RemovePin /> Plakat abhängen
 						</Button>
 					) : (
 						<Button
@@ -81,7 +84,7 @@ export default function PinDetailsSheet() {
 								close();
 							}}
 						>
-							<MapPinCheckInside /> Plakat wieder aufhängen
+							<AddPin /> Plakat wieder aufhängen
 						</Button>
 					)}
 				</div>

@@ -7,7 +7,7 @@ import {
 	type LayerProps,
 	Source,
 } from "react-map-gl/maplibre";
-import { pinQueries } from "@/queries";
+import { pinQueries } from "@/queries/pins";
 
 export const pinSourceId = "pins-source";
 
@@ -37,7 +37,11 @@ export const pinsClusterCountLayer = {
 export const pinsUnclusteredPointLayer = {
 	id: "pins-layer-unclustered",
 	type: "circle",
-	filter: ["all", ["!", ["has", "point_count"]], ["==", ["get", "tookDownAt"], null]],
+	filter: [
+		"all",
+		["!", ["has", "point_count"]],
+		["==", ["get", "tookDownAt"], null],
+	],
 	paint: {
 		"circle-radius": 18,
 		"circle-color": "#fbbf24",
@@ -49,7 +53,11 @@ export const pinsUnclusteredPointLayer = {
 export const pinsTookDownLayer = {
 	id: "pins-layer-took-down",
 	type: "circle",
-	filter: ["all", ["!", ["has", "point_count"]], ["!=", ["get", "tookDownAt"], null]],
+	filter: [
+		"all",
+		["!", ["has", "point_count"]],
+		["!=", ["get", "tookDownAt"], null],
+	],
 	paint: {
 		"circle-radius": 18,
 		"circle-color": "#9ca3af",

@@ -1,6 +1,11 @@
-import { ClientOnly, createFileRoute } from "@tanstack/react-router";
+import {
+	ClientOnly,
+	createFileRoute,
+	useNavigate,
+} from "@tanstack/react-router";
 import { useGeolocation } from "@uidotdev/usehooks";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import MapLibre, {
 	type LngLatLike,
@@ -8,8 +13,9 @@ import MapLibre, {
 	Marker,
 } from "react-map-gl/maplibre";
 import { useShallow } from "zustand/react/shallow";
+import { Button } from "@/components/ui/button";
 import { env } from "@/env";
-import { pinQueries } from "@/queries";
+import { pinQueries } from "@/queries/pins";
 import { useAppStore } from "@/store/app-store";
 import AccuracyCricle from "./-components/map-accuracy-cricle";
 import MapControls from "./-components/map-control";
@@ -45,6 +51,8 @@ function RouteComponent() {
 }
 
 function MapComponent() {
+	const navigate = useNavigate();
+
 	const [disableAccuracyCircle, setDisableAccuracyCircle] = useState(true);
 	const [cursor, setCursor] = useState<string>("grab");
 	const { setMode } = useAppStore(
@@ -178,6 +186,16 @@ function MapComponent() {
 					<PinControl geolocation={geolocation} />
 					<MenuSheet />
 				</MapLibre>
+			</div>
+			<div className="absolute top-2 left-2 grid gap-2 p-1 bg-background rounded-md shadow-md">
+				<Button
+					className="p-5"
+					variant="ghost"
+					size="icon-lg"
+					onClick={() => navigate({ to: "/" })}
+				>
+					<ArrowLeft />
+				</Button>
 			</div>
 			<PinDetailsSheet />
 		</div>
