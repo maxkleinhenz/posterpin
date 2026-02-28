@@ -1,5 +1,6 @@
 import { defineSchema, defineTable } from 'convex/server'
-import { Infer, v } from 'convex/values'
+import { v } from 'convex/values'
+import type { Infer } from 'convex/values'
 import type { Doc } from './_generated/dataModel'
 
 const schema = defineSchema({

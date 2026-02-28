@@ -1,4 +1,4 @@
-/** biome-ignore-all lint/suspicious/noShadowRestrictedNames: <explanation> */
+/** biome-ignore-all lint/suspicious/noShadowRestrictedNames: using Map icon component name from lucide-react */
 
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";

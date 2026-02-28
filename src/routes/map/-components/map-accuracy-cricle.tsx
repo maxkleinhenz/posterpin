@@ -1,4 +1,4 @@
-/** biome-ignore-all lint/correctness/useUniqueElementIds: <explanation> */
+/** biome-ignore-all lint/correctness/useUniqueElementIds: layer and source IDs are fixed map style IDs by design */
 
 import type { GeolocationState } from "@uidotdev/usehooks";
 import "maplibre-gl/dist/maplibre-gl.css";

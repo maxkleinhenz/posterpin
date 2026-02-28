@@ -9,6 +9,7 @@ import { useShallow } from "zustand/react/shallow";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { VirtualScrollArea } from "@/components/ui/scroll-area";
 import {
 	Sheet,
 	SheetContent,
@@ -22,7 +23,6 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { VirtualScrollArea } from "@/components/ui/scroll-area";
 import { AddPin, PinMarker, PinMarkerOff, RemovePin } from "@/icons";
 import {
 	pinQueries,
