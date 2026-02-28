@@ -1,6 +1,6 @@
 import { Migrations } from "@convex-dev/migrations";
 import { components } from "./_generated/api";
-import type { DataModel } from "./_generated/dataModel";
+import type { DataModel, Id } from "./_generated/dataModel";
 
 const migrations = new Migrations<DataModel>(components.migrations);
 
@@ -24,6 +24,17 @@ export const addHangAtColumn = migrations.define({
     // Add tookDownAt field if it doesn't exist
     if (doc.hangAt === undefined)  {
       await ctx.db.patch(doc._id, { hangAt: doc._creationTime });
+    }
+  },
+});
+
+// npx convex dev
+// npx convex run migrations:run '{fn: "migrations:addCampaignIdColumn"}'
+export const addCampaignIdColumn = migrations.define({
+  table: "pins",
+  migrateOne: async (ctx, doc) => {
+    if (doc.campaignId === undefined || doc.campaignId === null) {
+      await ctx.db.patch(doc._id, { campaignId:  "jh7fe4q149a63we6t1sd749dqd81wnmz" as Id<"campaigns"> });
     }
   },
 });

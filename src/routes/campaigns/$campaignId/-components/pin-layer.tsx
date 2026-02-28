@@ -1,5 +1,7 @@
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useQuery } from "@tanstack/react-query";
+import { useParams } from "@tanstack/react-router";
+import type { Id } from "convex/_generated/dataModel";
 import { useMemo } from "react";
 import {
 	type GeoJSONSourceSpecification,
@@ -68,7 +70,8 @@ export const pinsTookDownLayer = {
 } as const satisfies LayerProps;
 
 export default function PinsLayer() {
-	const pins = useQuery(pinQueries.list());
+	const { campaignId } = useParams({ from: "/campaigns/$campaignId/" });
+	const pins = useQuery(pinQueries.list(campaignId as Id<"campaigns">));
 
 	const pinsGeoJSON = useMemo(() => {
 		if (!pins.data) return null;

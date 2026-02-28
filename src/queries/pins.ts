@@ -6,7 +6,9 @@ import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 
 export const pinQueries = {
-	list: () => convexQuery(api.pins.list, {}),
+	getById: (pinId: Id<"pins">) => convexQuery(api.pins.getById, { pinId }),
+	list: (campaignId: Id<"campaigns">) =>
+		convexQuery(api.pins.list, { campaignId }),
 };
 
 export const useAddPinMutation = () => {
@@ -19,11 +21,13 @@ export const useAddPinMutation = () => {
 		},
 		onMutate: async (pin) => {
 			// Cancel outgoing refetches
-			await queryClient.cancelQueries({ queryKey: pinQueries.list().queryKey });
+			await queryClient.cancelQueries({
+				queryKey: pinQueries.list(pin.campaignId).queryKey,
+			});
 
 			// Snapshot the previous value
 			const previousPins = queryClient.getQueryData<Pin[]>(
-				pinQueries.list().queryKey,
+				pinQueries.list(pin.campaignId).queryKey,
 			);
 
 			// Optimistically update the cache with a temporary Pin
@@ -35,26 +39,31 @@ export const useAddPinMutation = () => {
 				tookDownAt: null,
 			};
 
-			queryClient.setQueryData<Pin[]>(pinQueries.list().queryKey, (old) => {
-				if (!old) return [optimisticPin];
-				return [optimisticPin, ...old];
-			});
+			queryClient.setQueryData<Pin[]>(
+				pinQueries.list(pin.campaignId).queryKey,
+				(old) => {
+					if (!old) return [optimisticPin];
+					return [optimisticPin, ...old];
+				},
+			);
 
 			// Return context for rollback
-			return { previousPins };
+			return { previousPins, campaignId: pin.campaignId };
 		},
 		onError: (_error, _variables, context) => {
 			// Rollback on error
 			if (context?.previousPins) {
 				queryClient.setQueryData(
-					pinQueries.list().queryKey,
+					pinQueries.list(context.campaignId).queryKey,
 					context.previousPins,
 				);
 			}
 		},
-		onSettled: () => {
+		onSettled: (_data, _error, context) => {
 			// Invalidate to refetch and ensure consistency
-			queryClient.invalidateQueries({ queryKey: pinQueries.list().queryKey });
+			queryClient.invalidateQueries({
+				queryKey: pinQueries.list(context.campaignId).queryKey,
+			});
 		},
 	});
 };
@@ -68,37 +77,53 @@ export function useTakeDownPinMutation() {
 			return await convex.mutation(api.pins.takeDown, pin);
 		},
 		onMutate: async (pin) => {
+			const existingPin = queryClient.getQueryData<Pin>(
+				pinQueries.getById(pin.id).queryKey,
+			);
+			if (!existingPin) throw new Error("Pin not found");
+
 			// Cancel outgoing refetches
-			await queryClient.cancelQueries({ queryKey: pinQueries.list().queryKey });
+			await queryClient.cancelQueries({
+				queryKey: pinQueries.list(existingPin.campaignId).queryKey,
+			});
 
 			// Snapshot the previous value
 			const previousPins = queryClient.getQueryData<Pin[]>(
-				pinQueries.list().queryKey,
+				pinQueries.list(existingPin.campaignId).queryKey,
 			);
+			const newPin = { ...existingPin, tookDownAt: pin.tookDownAt };
 
 			// Optimistically update the pin with tookDownAt timestamp
-			queryClient.setQueryData<Pin[]>(pinQueries.list().queryKey, (old) => {
-				if (!old) return [];
-				return old.map((p) =>
-					p._id === pin.id ? { ...p, tookDownAt: pin.tookDownAt } : p,
-				);
-			});
+			queryClient.setQueryData<Pin[]>(
+				pinQueries.list(existingPin.campaignId).queryKey,
+				(old) => {
+					if (!old) return [];
+					return old.map((p) => (p._id === pin.id ? newPin : p));
+				},
+			);
 
 			// Return context for rollback
-			return { previousPins };
+			return { previousPins, newPin };
 		},
 		onError: (_error, _variables, context) => {
 			// Rollback on error
 			if (context?.previousPins) {
 				queryClient.setQueryData(
-					pinQueries.list().queryKey,
+					pinQueries.list(context.newPin.campaignId).queryKey,
 					context.previousPins,
 				);
 			}
 		},
-		onSettled: () => {
+		onSettled: (_data, _error, data) => {
 			// Invalidate to refetch and ensure consistency
-			queryClient.invalidateQueries({ queryKey: pinQueries.list().queryKey });
+			const existingPin = queryClient.getQueryData<Pin>(
+				pinQueries.getById(data.id).queryKey,
+			);
+			if (!existingPin) return;
+
+			queryClient.invalidateQueries({
+				queryKey: pinQueries.list(existingPin.campaignId).queryKey,
+			});
 		},
 	});
 }
@@ -112,37 +137,53 @@ export function useHangAgainPinMutation() {
 			return await convex.mutation(api.pins.hangAgain, pin);
 		},
 		onMutate: async (pin) => {
+			const existingPin = queryClient.getQueryData<Pin>(
+				pinQueries.getById(pin.id).queryKey,
+			);
+			if (!existingPin) throw new Error("Pin not found");
+
 			// Cancel outgoing refetches
-			await queryClient.cancelQueries({ queryKey: pinQueries.list().queryKey });
+			await queryClient.cancelQueries({
+				queryKey: pinQueries.list(existingPin.campaignId).queryKey,
+			});
 
 			// Snapshot the previous value
 			const previousPins = queryClient.getQueryData<Pin[]>(
-				pinQueries.list().queryKey,
+				pinQueries.list(existingPin.campaignId).queryKey,
 			);
 
+			const newPin = { ...existingPin, tookDownAt: null, hangAt: pin.hangAt };
+
 			// Optimistically update the pin with tookDownAt timestamp
-			queryClient.setQueryData<Pin[]>(pinQueries.list().queryKey, (old) => {
-				if (!old) return [];
-				return old.map((p) =>
-					p._id === pin.id ? { ...p, tookDownAt: null, hangAt: pin.hangAt } : p,
-				);
-			});
+			queryClient.setQueryData<Pin[]>(
+				pinQueries.list(existingPin.campaignId).queryKey,
+				(old) => {
+					if (!old) return [];
+					return old.map((p) => (p._id === pin.id ? newPin : p));
+				},
+			);
 
 			// Return context for rollback
-			return { previousPins };
+			return { previousPins, newPin };
 		},
 		onError: (_error, _variables, context) => {
 			// Rollback on error
 			if (context?.previousPins) {
 				queryClient.setQueryData(
-					pinQueries.list().queryKey,
+					pinQueries.list(context.newPin.campaignId).queryKey,
 					context.previousPins,
 				);
 			}
 		},
-		onSettled: () => {
+		onSettled: (_data, _error, data) => {
 			// Invalidate to refetch and ensure consistency
-			queryClient.invalidateQueries({ queryKey: pinQueries.list().queryKey });
+			const existingPin = queryClient.getQueryData<Pin>(
+				pinQueries.getById(data.id).queryKey,
+			);
+			if (!existingPin) return;
+			queryClient.invalidateQueries({
+				queryKey: pinQueries.list(existingPin.campaignId).queryKey,
+			});
 		},
 	});
 }

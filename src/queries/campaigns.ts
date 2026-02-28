@@ -6,6 +6,7 @@ import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 
 export const campaignsQueries = {
+	getById: (id: Id<"campaigns">) => convexQuery(api.campaigns.getById, { id }),
 	list: () => convexQuery(api.campaigns.list, {}),
 };
 

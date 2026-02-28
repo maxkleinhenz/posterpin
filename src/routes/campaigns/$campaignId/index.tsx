@@ -5,6 +5,8 @@ import {
 } from "@tanstack/react-router";
 import { useGeolocation } from "@uidotdev/usehooks";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import type { Id } from "convex/_generated/dataModel";
 import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import MapLibre, {
@@ -14,7 +16,13 @@ import MapLibre, {
 } from "react-map-gl/maplibre";
 import { useShallow } from "zustand/react/shallow";
 import { Button } from "@/components/ui/button";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { env } from "@/env";
+import { campaignsQueries } from "@/queries/campaigns";
 import { pinQueries } from "@/queries/pins";
 import { useAppStore } from "@/store/app-store";
 import AccuracyCricle from "./-components/map-accuracy-cricle";
@@ -35,10 +43,14 @@ const interactiveLayerIds = [
 	pinsTookDownLayer.id,
 ] as const;
 
-export const Route = createFileRoute("/map/")({
+export const Route = createFileRoute("/campaigns/$campaignId/")({
 	component: RouteComponent,
-	loader: async ({ context: { queryClient } }) => {
-		await queryClient.ensureQueryData(pinQueries.list());
+	loader: async ({ params, context: { queryClient } }) => {
+		const campaignId = params.campaignId as Id<"campaigns">;
+		await Promise.all([
+			queryClient.ensureQueryData(campaignsQueries.getById(campaignId)),
+			queryClient.ensureQueryData(pinQueries.list(campaignId)),
+		]);
 	},
 });
 
@@ -52,6 +64,9 @@ function RouteComponent() {
 
 function MapComponent() {
 	const navigate = useNavigate();
+	const campaignId = Route.useParams().campaignId as Id<"campaigns">;
+
+	const campaign = useSuspenseQuery(campaignsQueries.getById(campaignId));
 
 	const [disableAccuracyCircle, setDisableAccuracyCircle] = useState(true);
 	const [cursor, setCursor] = useState<string>("grab");
@@ -121,6 +136,14 @@ function MapComponent() {
 		timeout: 5000,
 	});
 
+	if (campaign.isLoading || campaign.data == null) {
+		return (
+			<div className="h-screen w-screen">
+				<p>Loading</p>
+			</div>
+		);
+	}
+
 	if (geolocation.loading) {
 		return (
 			<div className="h-screen w-screen">
@@ -184,18 +207,27 @@ function MapComponent() {
 						}
 					/>
 					<PinControl geolocation={geolocation} />
-					<MenuSheet />
+					<MenuSheet campaign={campaign.data} />
 				</MapLibre>
 			</div>
-			<div className="absolute top-2 left-2 grid gap-2 p-1 bg-background rounded-md shadow-md">
-				<Button
-					className="p-5"
-					variant="ghost"
-					size="icon-lg"
-					onClick={() => navigate({ to: "/" })}
-				>
-					<ArrowLeft />
-				</Button>
+			<div className="absolute top-2 left-2 flex items-center gap-2 p-1 pr-4 bg-background rounded-md shadow-md">
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<Button
+							className="p-5"
+							variant="ghost"
+							size="icon-lg"
+							onClick={() => navigate({ to: "/" })}
+						>
+							<ArrowLeft />
+						</Button>
+					</TooltipTrigger>
+					<TooltipContent className="px-2 py-1 text-xs" side="bottom">
+						Zurück
+					</TooltipContent>
+				</Tooltip>
+
+				<h1 className="text font-semibold">{campaign.data?.name}</h1>
 			</div>
 			<PinDetailsSheet />
 		</div>

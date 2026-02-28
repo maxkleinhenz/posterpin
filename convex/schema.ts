@@ -7,9 +7,12 @@ const schema = defineSchema({
   pins: defineTable({
     longitude: v.number(),
     latitude: v.number(),
+    campaignId: v.id('campaigns'),
     hangAt: v.optional(v.nullable(v.number())),
     tookDownAt: v.optional(v.nullable(v.number())),
-  }).index('by_hang_at', ['hangAt']),
+  })
+  .index("by_campaign", ["campaignId"])
+  .index('by_hang_at', ['hangAt']),
   campaigns: defineTable({
     name: v.string(),
     description: v.optional(v.string()),
@@ -36,6 +39,7 @@ const pin = schema.tables.pins.validator
 export const insertPinSchema = v.object({
   latitude: pin.fields.latitude,
   longitude: pin.fields.longitude,
+  campaignId: pin.fields.campaignId,
 })
 export type InsertPin = Infer<typeof insertPinSchema>
 

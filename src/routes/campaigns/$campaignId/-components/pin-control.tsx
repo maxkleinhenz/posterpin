@@ -1,4 +1,6 @@
+import { useParams } from "@tanstack/react-router";
 import type { GeolocationState } from "@uidotdev/usehooks";
+import type { Id } from "convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { AddPin } from "@/icons";
 import { useAddPinMutation } from "@/queries/pins";
@@ -8,6 +10,7 @@ export default function PinControl({
 }: {
 	geolocation: GeolocationState;
 }) {
+	const { campaignId } = useParams({ from: "/campaigns/$campaignId/" });
 	const mutation = useAddPinMutation();
 
 	const longitude = geolocation.longitude;
@@ -26,6 +29,7 @@ export default function PinControl({
 					mutation.mutate({
 						latitude: latitude,
 						longitude: longitude,
+						campaignId: campaignId as Id<"campaigns">,
 					});
 				}}
 			>

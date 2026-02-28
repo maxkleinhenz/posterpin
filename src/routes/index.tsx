@@ -79,7 +79,11 @@ function CampaignList({ campaigns }: { campaigns: Campaign[] }) {
 
 						<ItemActions>
 							<Button variant="outline" size="sm" asChild>
-								<Link to="/map" className="w-full">
+								<Link
+									to="/campaigns/$campaignId"
+									params={{ campaignId: campaign._id }}
+									className="w-full"
+								>
 									Anzeigen
 								</Link>
 							</Button>

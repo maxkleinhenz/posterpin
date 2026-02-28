@@ -29,6 +29,11 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { env } from "@/env";
 import { cn } from "@/lib/utils";
 import { useAddCampaignMutation } from "@/queries/campaigns";
@@ -233,13 +238,23 @@ export default function CreateCampaign() {
 															<CalendarIcon className="size-4 opacity-50" />
 														</Button>
 													</PopoverTrigger>
-													<Button
-														variant="ghost"
-														disabled={!selectedDate}
-														onClick={() => field.onChange(undefined)}
-													>
-														<CircleX className="size-4 opacity-50" />
-													</Button>
+													<Tooltip>
+														<TooltipTrigger asChild>
+															<Button
+																variant="ghost"
+																disabled={!selectedDate}
+																onClick={() => field.onChange(undefined)}
+															>
+																<CircleX className="size-4 opacity-50" />
+															</Button>
+														</TooltipTrigger>
+														<TooltipContent
+															className="px-2 py-1 text-xs"
+															side="bottom"
+														>
+															Datum entfernen
+														</TooltipContent>
+													</Tooltip>
 												</div>
 												<PopoverContent className="w-auto p-0" align="start">
 													<Calendar
@@ -286,13 +301,23 @@ export default function CreateCampaign() {
 															<CalendarIcon className="size-4 opacity-50" />
 														</Button>
 													</PopoverTrigger>
-													<Button
-														variant="ghost"
-														disabled={!selectedDate}
-														onClick={() => field.onChange(undefined)}
-													>
-														<CircleX className="size-4 opacity-50" />
-													</Button>
+													<Tooltip>
+														<TooltipTrigger asChild>
+															<Button
+																variant="ghost"
+																disabled={!selectedDate}
+																onClick={() => field.onChange(undefined)}
+															>
+																<CircleX className="size-4 opacity-50" />
+															</Button>
+														</TooltipTrigger>
+														<TooltipContent
+															className="px-2 py-1 text-xs"
+															side="bottom"
+														>
+															Datum entfernen
+														</TooltipContent>
+													</Tooltip>
 												</div>
 												<PopoverContent className="w-auto p-0" align="start">
 													<Calendar

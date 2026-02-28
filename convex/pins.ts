@@ -1,5 +1,7 @@
 import { internalMutation, mutation, query } from "./_generated/server"
+import type { Id } from "./_generated/dataModel"
 import { hangPinAgainSchema, insertPinSchema, takePinDownSchema } from "./schema"
+import { v } from "convex/values"
 
 export const seed = internalMutation(async (ctx) => {
   const allBoards = await ctx.db.query('pins').collect()
@@ -9,18 +11,26 @@ export const seed = internalMutation(async (ctx) => {
   await ctx.db.insert('pins', {
     longitude: 13.726584932188327,
     latitude: 51.029938550838814,
+    campaignId: "jh7fe4q149a63we6t1sd749dqd81wnmz" as Id<"campaigns">,
     hangAt: Date.now(),
     tookDownAt: null,
   })
 })
 
+export const getById = query({
+  args: {pinId: v.id("pins")},
+  handler: async (ctx, args) => {
+    return await ctx.db.get("pins", args.pinId);
+  },
+})
+
 export const list = query({
-  args: {},
-  handler: async (ctx) => {
+  args: {campaignId: v.id("campaigns")},
+  handler: async (ctx, args) => {
     return await ctx.db
       .query('pins')
-      .withIndex('by_creation_time') // keep order after re-hanging up
-      .order('desc')
+      .withIndex("by_campaign", (q) => q.eq("campaignId", args.campaignId))
+      .order('desc') // default order is by _creationTime, we use it to keep order after re-hanging up
       .collect()
   },
 })
@@ -31,6 +41,7 @@ export const add = mutation({
     return await ctx.db.insert('pins', {
       latitude: args.latitude,
       longitude: args.longitude,
+      campaignId: args.campaignId,
       hangAt: Date.now(),
       tookDownAt: null,
     })

@@ -10,43 +10,44 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as MapIndexRouteImport } from './routes/map/index'
+import { Route as CampaignsCampaignIdIndexRouteImport } from './routes/campaigns/$campaignId/index'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MapIndexRoute = MapIndexRouteImport.update({
-  id: '/map/',
-  path: '/map/',
-  getParentRoute: () => rootRouteImport,
-} as any)
+const CampaignsCampaignIdIndexRoute =
+  CampaignsCampaignIdIndexRouteImport.update({
+    id: '/campaigns/$campaignId/',
+    path: '/campaigns/$campaignId/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/map/': typeof MapIndexRoute
+  '/campaigns/$campaignId/': typeof CampaignsCampaignIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/map': typeof MapIndexRoute
+  '/campaigns/$campaignId': typeof CampaignsCampaignIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/map/': typeof MapIndexRoute
+  '/campaigns/$campaignId/': typeof CampaignsCampaignIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/map/'
+  fullPaths: '/' | '/campaigns/$campaignId/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/map'
-  id: '__root__' | '/' | '/map/'
+  to: '/' | '/campaigns/$campaignId'
+  id: '__root__' | '/' | '/campaigns/$campaignId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  MapIndexRoute: typeof MapIndexRoute
+  CampaignsCampaignIdIndexRoute: typeof CampaignsCampaignIdIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -58,11 +59,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/map/': {
-      id: '/map/'
-      path: '/map'
-      fullPath: '/map/'
-      preLoaderRoute: typeof MapIndexRouteImport
+    '/campaigns/$campaignId/': {
+      id: '/campaigns/$campaignId/'
+      path: '/campaigns/$campaignId'
+      fullPath: '/campaigns/$campaignId/'
+      preLoaderRoute: typeof CampaignsCampaignIdIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -70,7 +71,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  MapIndexRoute: MapIndexRoute,
+  CampaignsCampaignIdIndexRoute: CampaignsCampaignIdIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
