@@ -1,6 +1,13 @@
 import type { GeolocationState } from "@uidotdev/usehooks";
-import { LocateFixed, Settings, ZoomIn, ZoomOut } from "lucide-react";
+import {
+	LocateFixed,
+	Navigation2,
+	Settings,
+	ZoomIn,
+	ZoomOut,
+} from "lucide-react";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { useEffect, useState } from "react";
 import { useMap } from "react-map-gl/maplibre";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,9 +24,27 @@ export default function MapControls({
 	toggleaAcuracyCircle: () => void;
 }) {
 	const { current: map } = useMap();
+	const [bearing, setBearing] = useState(0);
 
 	const longitude = geolocation.longitude;
 	const latitude = geolocation.latitude;
+
+	useEffect(() => {
+		if (!map) {
+			return;
+		}
+
+		const syncBearing = () => {
+			setBearing(map.getBearing());
+		};
+
+		syncBearing();
+		map.on("rotate", syncBearing);
+
+		return () => {
+			map.off("rotate", syncBearing);
+		};
+	}, [map]);
 
 	return (
 		<div className="absolute bottom-10 right-2 grid gap-2">
@@ -72,6 +97,30 @@ export default function MapControls({
 					</TooltipTrigger>
 					<TooltipContent className="px-2 py-1 text-xs" side="left">
 						Hineinzoom
+					</TooltipContent>
+				</Tooltip>
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<Button
+							className="p-5"
+							variant="ghost"
+							size="icon-lg"
+							onClick={() =>
+								map?.easeTo({
+									bearing: 0,
+									animate: true,
+								})
+							}
+						>
+							<Navigation2
+								className="size-5 transition-transform"
+								style={{ transform: `rotate(${-bearing}deg)` }}
+							/>
+							<span className="sr-only">Kompass nach Norden</span>
+						</Button>
+					</TooltipTrigger>
+					<TooltipContent className="px-2 py-1 text-xs" side="left">
+						Nach Norden ausrichten
 					</TooltipContent>
 				</Tooltip>
 				{longitude != null && latitude != null && (

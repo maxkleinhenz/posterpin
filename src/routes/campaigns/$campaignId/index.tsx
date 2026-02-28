@@ -177,7 +177,7 @@ function MapComponent() {
 						latitude: geolocation.latitude,
 						zoom: 16,
 					}}
-					dragRotate={false}
+					// dragRotate={false}
 					pitchWithRotate={false}
 					keyboard={false}
 					style={{ width: "100%", height: "100%" }}
