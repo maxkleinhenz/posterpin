@@ -22,7 +22,7 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { VirtualizedScrollArea } from "@/components/VirtualizedScrollArea";
+import { VirtualScrollArea } from "@/components/ui/scroll-area";
 import { AddPin, PinMarker, PinMarkerOff, RemovePin } from "@/icons";
 import {
 	pinQueries,
@@ -110,37 +110,39 @@ export default function MenuSheet() {
 					className="rounded-t-md w-full md:w-96 h-[80dvh] md:h-dvh"
 					side={isSmallDevice ? "bottom" : "left"}
 				>
-					<SheetHeader>
-						<SheetTitle>Kampagne</SheetTitle>
-						<SheetDescription>Insgesamt {pins.length} Plakate</SheetDescription>
-					</SheetHeader>
-					<div className="px-4">
-						<Label>
-							<Checkbox
-								checked={showOnlyHangedPins}
-								onCheckedChange={(e) =>
-									e === true
-										? setShowOnlyHangedPins(true)
-										: setShowOnlyHangedPins(false)
-								}
-							/>
-							Nur aufgehängte Plakate anzeigen
-						</Label>
-					</div>
+					<div className="grid grid-rows-[auto_auto_1fr] gap-2 overflow-hidden h-full">
+						<SheetHeader>
+							<SheetTitle>Kampagne</SheetTitle>
+							<SheetDescription>
+								Insgesamt {pins.length} Plakate
+							</SheetDescription>
+						</SheetHeader>
+						<div className="px-4">
+							<Label>
+								<Checkbox
+									checked={showOnlyHangedPins}
+									onCheckedChange={(e) =>
+										e === true
+											? setShowOnlyHangedPins(true)
+											: setShowOnlyHangedPins(false)
+									}
+								/>
+								Nur aufgehängte Plakate anzeigen
+							</Label>
+						</div>
 
-					<div className="grid grid-rows-[auto_auto_1fr] gap-2 overflow-hidden">
-						<VirtualizedScrollArea
+						<VirtualScrollArea
 							className="px-4"
 							items={pins}
-							estimateSize={() => 56}
-							renderItem={(item) => (
+							estimateSize={() => 57}
+							renderItem={(item, index) => (
 								<div className="grid grid-cols-[1fr_auto] gap-4 p-2 rounded-md">
 									{item.tookDownAt == null ? (
 										<div>
 											<div className="flex gap-1 items-center">
 												<PinMarker className="size-5" />
 												<p className="line-clamp-1 text-sm leading-snug font-medium underline-offset-4">
-													Plakat
+													{index} Plakat
 												</p>
 											</div>
 											<p className="text-muted-foreground line-clamp-2 text-left text-sm leading-normal font-normal">
@@ -153,7 +155,7 @@ export default function MenuSheet() {
 											<div className="flex gap-1 items-center">
 												<PinMarkerOff className=" size-5" />
 												<p className="line-clamp-1 text-sm leading-snug font-medium underline-offset-4 line-through">
-													Plakat
+													{index} Plakat
 												</p>
 											</div>
 											<p className="line-clamp-2 text-left text-sm leading-normal font-normal">

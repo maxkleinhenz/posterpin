@@ -105,8 +105,8 @@ export default function PinsLayer() {
 		>
 			<Layer {...pinsClusterLayer} />
 			<Layer {...pinsClusterCountLayer} />
-			<Layer {...pinsUnclusteredPointLayer} />
 			<Layer {...pinsTookDownLayer} />
+			<Layer {...pinsUnclusteredPointLayer} />
 		</Source>
 	);
 }

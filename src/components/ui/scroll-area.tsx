@@ -1,3 +1,4 @@
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { ScrollArea as ScrollAreaPrimitive } from "radix-ui";
 import * as React from "react";
 
@@ -8,59 +9,43 @@ const ScrollArea = React.forwardRef<
 	React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root> & {
 		viewPortClassName?: string;
 		orientation?: "vertical" | "horizontal";
-		viewPortRef?: React.RefObject<HTMLDivElement | null>;
+		viewPortRef?: React.Ref<HTMLDivElement>;
 	}
 >(
-	({
-		className,
-		children,
-		viewPortClassName,
-		viewPortRef,
-		orientation = "vertical",
-		...props
-	}) => (
+	(
+		{
+			className,
+			children,
+			viewPortClassName,
+			viewPortRef,
+			orientation = "vertical",
+			...props
+		},
+		ref,
+	) => (
 		<ScrollAreaPrimitive.Root
 			data-slot="scroll-area"
 			className={cn("relative", className)}
-			ref={viewPortRef}
+			ref={ref}
 			{...props}
 		>
 			<ScrollAreaPrimitive.Viewport
 				ref={viewPortRef}
 				data-slot="scroll-area-viewport"
-				className="focus-visible:ring-ring/50 size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:outline-1"
+				className={cn(
+					"focus-visible:ring-ring/50 size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:outline-1",
+					viewPortClassName,
+				)}
 			>
 				{children}
 			</ScrollAreaPrimitive.Viewport>
-			<ScrollBar />
+			<ScrollBar orientation={orientation} />
 			<ScrollAreaPrimitive.Corner />
 		</ScrollAreaPrimitive.Root>
 	),
 );
 
-// function ScrollAreaa({
-// 	className,
-// 	children,
-// 	...props
-// }: React.ComponentProps<typeof ScrollAreaPrimitive.Root>) {
-// 	return (
-// 		<ScrollAreaPrimitive.Root
-// 			data-slot="scroll-area"
-// 			className={cn("relative", className)}
-// 			{...props}
-// 		>
-// 			<ScrollAreaPrimitive.Viewport
-// 				ref={viewPortRef}
-// 				data-slot="scroll-area-viewport"
-// 				className="focus-visible:ring-ring/50 size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:outline-1"
-// 			>
-// 				{children}
-// 			</ScrollAreaPrimitive.Viewport>
-// 			<ScrollBar />
-// 			<ScrollAreaPrimitive.Corner />
-// 		</ScrollAreaPrimitive.Root>
-// 	);
-// }
+ScrollArea.displayName = "ScrollArea";
 
 function ScrollBar({
 	className,
@@ -89,4 +74,73 @@ function ScrollBar({
 	);
 }
 
-export { ScrollArea, ScrollBar };
+interface VirtualScrollAreaProps<T> {
+	items: T[];
+	renderItem: (item: T, index: number) => React.ReactNode;
+	overscan?: number;
+	estimateSize: (index: number) => number;
+	getItemKey?: (index: number) => string | number;
+	className?: string;
+	viewPortClassName?: string;
+}
+
+function VirtualScrollArea<T extends object>({
+	items,
+	renderItem,
+	overscan = 5,
+	estimateSize,
+	getItemKey,
+	className,
+	viewPortClassName,
+	...props
+}: VirtualScrollAreaProps<T> &
+	Omit<
+		React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root>,
+		"children"
+	>) {
+	const parentRef = React.useRef<HTMLDivElement>(null);
+
+	const rowVirtualizer = useVirtualizer({
+		count: items.length,
+		getScrollElement: () => parentRef.current,
+		estimateSize,
+		overscan,
+		getItemKey: getItemKey ?? ((index) => index),
+	});
+
+	const virtualItems = rowVirtualizer.getVirtualItems();
+
+	return (
+		<ScrollArea
+			viewPortRef={parentRef}
+			className={cn("h-full min-h-0", className)}
+			viewPortClassName={cn("min-h-0 overflow-y-auto", viewPortClassName)}
+			{...props}
+		>
+			<div
+				className="relative w-full"
+				style={{
+					height: `${rowVirtualizer.getTotalSize()}px`,
+				}}
+			>
+				{virtualItems.map((virtualItem) => (
+					<div
+						key={virtualItem.key}
+						data-virtual-index={virtualItem.index}
+						className="absolute top-0 left-0 w-full"
+						style={{
+							height: `${virtualItem.size}px`,
+							transform: `translateY(${virtualItem.start}px)`,
+						}}
+					>
+						{renderItem(items[virtualItem.index], virtualItem.index)}
+					</div>
+				))}
+			</div>
+		</ScrollArea>
+	);
+}
+
+VirtualScrollArea.displayName = "VirtualScrollArea";
+
+export { ScrollArea, ScrollBar, VirtualScrollArea };
