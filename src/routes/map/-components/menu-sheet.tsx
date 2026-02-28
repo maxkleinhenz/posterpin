@@ -135,14 +135,14 @@ export default function MenuSheet() {
 							className="px-4"
 							items={pins}
 							estimateSize={() => 57}
-							renderItem={(item, index) => (
+							renderItem={(item) => (
 								<div className="grid grid-cols-[1fr_auto] gap-4 p-2 rounded-md">
 									{item.tookDownAt == null ? (
 										<div>
 											<div className="flex gap-1 items-center">
 												<PinMarker className="size-5" />
 												<p className="line-clamp-1 text-sm leading-snug font-medium underline-offset-4">
-													{index} Plakat
+													Plakat
 												</p>
 											</div>
 											<p className="text-muted-foreground line-clamp-2 text-left text-sm leading-normal font-normal">
@@ -155,7 +155,7 @@ export default function MenuSheet() {
 											<div className="flex gap-1 items-center">
 												<PinMarkerOff className=" size-5" />
 												<p className="line-clamp-1 text-sm leading-snug font-medium underline-offset-4 line-through">
-													{index} Plakat
+													Plakat
 												</p>
 											</div>
 											<p className="line-clamp-2 text-left text-sm leading-normal font-normal">
