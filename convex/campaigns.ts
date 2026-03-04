@@ -20,7 +20,7 @@ export const seed = internalMutation(async (ctx) => {
 export const getById = query({
 	args: { id: v.id("campaigns") },
 	handler: async (ctx, args) => {
-		return await ctx.db.get("campaigns", args.id);
+		return await ctx.db.get(args.id);
 	},
 });
 

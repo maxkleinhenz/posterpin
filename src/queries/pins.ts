@@ -11,6 +11,21 @@ export const pinQueries = {
 		convexQuery(api.pins.list, { campaignId }),
 };
 
+async function getPinById(
+	queryClient: ReturnType<typeof useQueryClient>,
+	convex: ReturnType<typeof useConvex>,
+	pinId: Id<"pins">,
+) {
+	const pinFromDetail = queryClient.getQueryData<Pin>(
+		pinQueries.getById(pinId).queryKey,
+	);
+	if (pinFromDetail) return pinFromDetail;
+
+	const pinFromDb = await convex.query(api.pins.getById, { pinId });
+	queryClient.setQueryData(pinQueries.getById(pinId).queryKey, pinFromDb);
+	return pinFromDb;
+}
+
 export const useAddPinMutation = () => {
 	const queryClient = useQueryClient();
 	const convex = useConvex();
@@ -77,9 +92,7 @@ export function useTakeDownPinMutation() {
 			return await convex.mutation(api.pins.takeDown, pin);
 		},
 		onMutate: async (pin) => {
-			const existingPin = queryClient.getQueryData<Pin>(
-				pinQueries.getById(pin.id).queryKey,
-			);
+			const existingPin = await getPinById(queryClient, convex, pin.id);
 			if (!existingPin) throw new Error("Pin not found");
 
 			// Cancel outgoing refetches
@@ -114,16 +127,16 @@ export function useTakeDownPinMutation() {
 				);
 			}
 		},
-		onSettled: (_data, _error, data) => {
-			// Invalidate to refetch and ensure consistency
-			const existingPin = queryClient.getQueryData<Pin>(
-				pinQueries.getById(data.id).queryKey,
-			);
-			if (!existingPin) return;
+		onSettled: async (_data, _error, variables) => {
+			const existingPin = await getPinById(queryClient, convex, variables.id);
+			if (existingPin) {
+				queryClient.invalidateQueries({
+					queryKey: pinQueries.list(existingPin.campaignId).queryKey,
+				});
+				return;
+			}
 
-			queryClient.invalidateQueries({
-				queryKey: pinQueries.list(existingPin.campaignId).queryKey,
-			});
+			queryClient.invalidateQueries();
 		},
 	});
 }
@@ -137,9 +150,7 @@ export function useHangAgainPinMutation() {
 			return await convex.mutation(api.pins.hangAgain, pin);
 		},
 		onMutate: async (pin) => {
-			const existingPin = queryClient.getQueryData<Pin>(
-				pinQueries.getById(pin.id).queryKey,
-			);
+			const existingPin = await getPinById(queryClient, convex, pin.id);
 			if (!existingPin) throw new Error("Pin not found");
 
 			// Cancel outgoing refetches
@@ -175,15 +186,16 @@ export function useHangAgainPinMutation() {
 				);
 			}
 		},
-		onSettled: (_data, _error, data) => {
-			// Invalidate to refetch and ensure consistency
-			const existingPin = queryClient.getQueryData<Pin>(
-				pinQueries.getById(data.id).queryKey,
-			);
-			if (!existingPin) return;
-			queryClient.invalidateQueries({
-				queryKey: pinQueries.list(existingPin.campaignId).queryKey,
-			});
+		onSettled: async (_data, _error, variables) => {
+			const existingPin = await getPinById(queryClient, convex, variables.id);
+			if (existingPin) {
+				queryClient.invalidateQueries({
+					queryKey: pinQueries.list(existingPin.campaignId).queryKey,
+				});
+				return;
+			}
+
+			queryClient.invalidateQueries();
 		},
 	});
 }

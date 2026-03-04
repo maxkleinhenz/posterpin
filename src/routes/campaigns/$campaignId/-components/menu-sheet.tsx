@@ -1,13 +1,8 @@
+import { useQuery } from "@tanstack/react-query";
 import { useMediaQuery } from "@uidotdev/usehooks";
-import { Focus, Menu } from "lucide-react";
-import "maplibre-gl/dist/maplibre-gl.css";
-import { useQueries, useQuery } from "@tanstack/react-query";
-import { useParams } from "@tanstack/react-router";
 import type { Id } from "convex/_generated/dataModel";
 import type { Campaign } from "convex/schema";
-import { useMemo, useState } from "react";
-import { useMap } from "react-map-gl/maplibre";
-import { useShallow } from "zustand/react/shallow";
+import { Focus, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -32,9 +27,14 @@ import {
 	useTakeDownPinMutation,
 } from "@/queries/pins";
 import { useAppStore } from "@/store/app-store";
+import "maplibre-gl/dist/maplibre-gl.css";
+import { useMemo, useState } from "react";
+import { useMap } from "react-map-gl/maplibre";
+import { useShallow } from "zustand/react/shallow";
 
 export default function MenuSheet({ campaign }: { campaign: Campaign }) {
 	const { current: map } = useMap();
+	const [showOnlyHangedPins, setShowOnlyHangedPins] = useState(false);
 
 	const list = useQuery(pinQueries.list(campaign._id));
 	const takeDownPinMutation = useTakeDownPinMutation();
@@ -42,7 +42,6 @@ export default function MenuSheet({ campaign }: { campaign: Campaign }) {
 	const isSmallDevice = useMediaQuery("only screen and (max-width : 768px)");
 
 	const [open, setOpen] = useState(false);
-	const [showOnlyHangedPins, setShowOnlyHangedPins] = useState(false);
 	const { setMode } = useAppStore(
 		useShallow((state) => ({ setMode: state.setMode })),
 	);

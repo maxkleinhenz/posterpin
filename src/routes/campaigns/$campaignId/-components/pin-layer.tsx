@@ -25,7 +25,7 @@ export const pinsClusterLayer = {
 	},
 } as const satisfies LayerProps;
 
-export const pinsClusterCountLayer = {
+const pinsClusterCountLayer = {
 	id: "pins-cluster-count",
 	type: "symbol",
 	filter: ["has", "point_count"],
