@@ -35,15 +35,27 @@ import MenuSheet from "./-components/menu-sheet";
 import PinControl from "./-components/pin-control";
 import PinDetailsSheet from "./-components/pin-details-sheet";
 import PinsLayer, {
-	pinSourceId,
-	pinsClusterLayer,
+	hungClusterLayer,
+	hungSourceId,
+	plannedClusterLayer,
+	plannedSourceId,
 	pinsPlannedLayer,
 	pinsTookDownLayer,
 	pinsUnclusteredPointLayer,
+	tookDownClusterLayer,
+	tookDownSourceId,
 } from "./-components/pin-layer";
 
+const clusterSourceMap: Record<string, string> = {
+	[hungClusterLayer.id]: hungSourceId,
+	[tookDownClusterLayer.id]: tookDownSourceId,
+	[plannedClusterLayer.id]: plannedSourceId,
+};
+
 const interactiveLayerIds = [
-	pinsClusterLayer.id,
+	hungClusterLayer.id,
+	tookDownClusterLayer.id,
+	plannedClusterLayer.id,
 	pinsUnclusteredPointLayer.id,
 	pinsTookDownLayer.id,
 	pinsPlannedLayer.id,
@@ -103,10 +115,11 @@ function MapComponent() {
 		const map = e.target;
 		const feature = e.features?.[0];
 
-		if (feature?.layer?.id === pinsClusterLayer.id) {
+		const sourceId = feature?.layer?.id && clusterSourceMap[feature.layer.id];
+		if (sourceId) {
 			const clusterId = feature.properties?.cluster_id as number;
 			if (clusterId) {
-				const source = map.getSource(pinSourceId) as maplibregl.GeoJSONSource;
+				const source = map.getSource(sourceId) as maplibregl.GeoJSONSource;
 				const zoom = await source.getClusterExpansionZoom(clusterId);
 				map.easeTo({
 					zoom,

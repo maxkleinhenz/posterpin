@@ -50,7 +50,6 @@ export default function PinDetailsSheet() {
 			<SheetContent
 				showCloseButton={true}
 				side="bottom"
-				onInteractOutside={(e) => console.log("interact outside", e)}
 				className="rounded-t-md w-full max-w-160 left-1/2 -translate-x-1/2"
 			>
 				<SheetHeader>
