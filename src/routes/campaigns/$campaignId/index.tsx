@@ -12,6 +12,7 @@ import { useEffect, useRef, useState } from "react";
 import MapLibre, {
 	type LngLatLike,
 	type MapLayerMouseEvent,
+	type MapLayerTouchEvent,
 	Marker,
 } from "react-map-gl/maplibre";
 import { useShallow } from "zustand/react/shallow";
@@ -203,6 +204,43 @@ function MapComponent() {
 		setCursor(mode.mode === "planning" ? "crosshair" : "grab");
 	}
 
+	function onTouchStart(e: MapLayerTouchEvent) {
+		const feature = e.features?.[0];
+		if (feature?.layer?.id !== pinsPlannedLayer.id) return;
+
+		const coords = (feature.geometry as GeoJSON.Point).coordinates;
+		wasDraggedRef.current = false;
+		setDraggingPin({
+			id: feature.properties?.id as string,
+			longitude: coords[0],
+			latitude: coords[1],
+		});
+		e.target.dragPan.disable();
+	}
+
+	function onTouchMove(e: MapLayerTouchEvent) {
+		if (!draggingPin) return;
+		wasDraggedRef.current = true;
+		setDraggingPin({
+			...draggingPin,
+			latitude: e.lngLat.lat,
+			longitude: e.lngLat.lng,
+		});
+	}
+
+	function onTouchEnd(e: MapLayerTouchEvent) {
+		if (!draggingPin) return;
+		if (wasDraggedRef.current) {
+			updatePositionMutation.mutate({
+				id: draggingPin.id as Id<"pins">,
+				latitude: draggingPin.latitude,
+				longitude: draggingPin.longitude,
+			});
+		}
+		setDraggingPin(null);
+		e.target.dragPan.enable();
+	}
+
 	function onMouseEnter(e: MapLayerMouseEvent) {
 		if (draggingPin) return;
 		const feature = e.features?.[0];
@@ -278,6 +316,9 @@ function MapComponent() {
 					onMouseUp={onMouseUp}
 					onMouseEnter={onMouseEnter}
 					onMouseLeave={onMouseLeave}
+					onTouchStart={onTouchStart}
+					onTouchMove={onTouchMove}
+					onTouchEnd={onTouchEnd}
 				>
 					<AccuracyCricle geolocation={geolocation} />
 					<Marker

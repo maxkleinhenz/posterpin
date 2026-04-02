@@ -42,14 +42,7 @@ export default function MapControls({
 	return (
 		<div className="absolute bottom-10 right-2 grid gap-2">
 			<div className="grid gap-2 p-1 bg-background rounded-md shadow-md">
-				<Tooltip>
-					<TooltipTrigger asChild>
-						<PinSettingsPopup />
-					</TooltipTrigger>
-					<TooltipContent className="px-2 py-1 text-xs" side="left">
-						Einstellungen
-					</TooltipContent>
-				</Tooltip>
+				<PinSettingsPopup />
 			</div>
 			<div className="grid gap-2 p-1 bg-background rounded-md shadow-md">
 				<Tooltip>

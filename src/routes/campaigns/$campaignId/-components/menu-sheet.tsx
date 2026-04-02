@@ -103,7 +103,7 @@ export default function MenuSheet({ campaign }: { campaign: Campaign }) {
 							</Button>
 						</SheetTrigger>
 					</TooltipTrigger>
-					<TooltipContent className="px-2 py-1 text-xs" side="right">
+					<TooltipContent className="px-2 py-1 text-xs" side="top">
 						Menü
 					</TooltipContent>
 				</Tooltip>
