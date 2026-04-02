@@ -52,6 +52,26 @@ export const add = mutation({
 	},
 });
 
+export const addPlanned = mutation({
+	args: insertPinSchema,
+	handler: async (ctx, args) => {
+		return await ctx.db.insert("pins", {
+			latitude: args.latitude,
+			longitude: args.longitude,
+			campaignId: args.campaignId,
+			hangAt: null,
+			tookDownAt: null,
+		});
+	},
+});
+
+export const remove = mutation({
+	args: { id: v.id("pins") },
+	handler: async (ctx, { id }) => {
+		await ctx.db.delete(id);
+	},
+});
+
 export const takeDown = mutation({
 	args: takePinDownSchema,
 	handler: async (ctx, { id, tookDownAt }) => {

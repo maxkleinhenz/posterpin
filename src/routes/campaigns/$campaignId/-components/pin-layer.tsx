@@ -43,6 +43,7 @@ export const pinsUnclusteredPointLayer = {
 		"all",
 		["!", ["has", "point_count"]],
 		["==", ["get", "tookDownAt"], null],
+		["!=", ["get", "hangAt"], null],
 	],
 	paint: {
 		"circle-radius": 18,
@@ -69,6 +70,25 @@ export const pinsTookDownLayer = {
 	},
 } as const satisfies LayerProps;
 
+export const pinsPlannedLayer = {
+	id: "pins-layer-planned",
+	type: "circle",
+	filter: [
+		"all",
+		["!", ["has", "point_count"]],
+		["==", ["get", "hangAt"], null],
+		["==", ["get", "tookDownAt"], null],
+	],
+	paint: {
+		"circle-radius": 18,
+		"circle-color": "#3b82f6",
+		"circle-stroke-width": 2,
+		"circle-stroke-color": "#ffffff",
+		// "circle-stroke-dasharray": [2, 2],
+		"circle-opacity": 0.85,
+	},
+} as const satisfies LayerProps;
+
 export default function PinsLayer() {
 	const { campaignId } = useParams({ from: "/campaigns/$campaignId/" });
 	const pins = useQuery(pinQueries.list(campaignId as Id<"campaigns">));
@@ -88,7 +108,7 @@ export default function PinsLayer() {
 					},
 					properties: {
 						id: pin._id,
-						hangAt: pin.hangAt,
+						hangAt: pin.hangAt ?? null,
 						tookDownAt: pin.tookDownAt ?? null,
 					},
 				})),
@@ -110,6 +130,7 @@ export default function PinsLayer() {
 			<Layer {...pinsClusterCountLayer} />
 			<Layer {...pinsTookDownLayer} />
 			<Layer {...pinsUnclusteredPointLayer} />
+			<Layer {...pinsPlannedLayer} />
 		</Source>
 	);
 }

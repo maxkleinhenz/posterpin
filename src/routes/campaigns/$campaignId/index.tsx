@@ -8,7 +8,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import type { Id } from "convex/_generated/dataModel";
 import { ArrowLeft } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import MapLibre, {
 	type LngLatLike,
 	type MapLayerMouseEvent,
@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/tooltip";
 import { env } from "@/env";
 import { campaignsQueries } from "@/queries/campaigns";
-import { pinQueries } from "@/queries/pins";
+import { pinQueries, useAddPlannedPinMutation } from "@/queries/pins";
 import { useAppStore } from "@/store/app-store";
 import AccuracyCricle from "./-components/map-accuracy-cricle";
 import MapControls from "./-components/map-control";
@@ -33,6 +33,7 @@ import PinDetailsSheet from "./-components/pin-details-sheet";
 import PinsLayer, {
 	pinSourceId,
 	pinsClusterLayer,
+	pinsPlannedLayer,
 	pinsTookDownLayer,
 	pinsUnclusteredPointLayer,
 } from "./-components/pin-layer";
@@ -41,6 +42,7 @@ const interactiveLayerIds = [
 	pinsClusterLayer.id,
 	pinsUnclusteredPointLayer.id,
 	pinsTookDownLayer.id,
+	pinsPlannedLayer.id,
 ] as const;
 
 export const Route = createFileRoute("/campaigns/$campaignId/")({
@@ -70,21 +72,23 @@ function MapComponent() {
 
 	const [disableAccuracyCircle, setDisableAccuracyCircle] = useState(true);
 	const [cursor, setCursor] = useState<string>("grab");
-	const { setMode } = useAppStore(
+	const { mode, setMode } = useAppStore(
 		useShallow((state) => ({
+			mode: state.mode,
 			setMode: state.setMode,
 		})),
 	);
+	const addPlannedPinMutation = useAddPlannedPinMutation();
+
+	useEffect(() => {
+		setCursor(mode.mode === "planning" ? "crosshair" : "grab");
+	}, [mode.mode]);
 
 	async function onMapClick(e: MapLayerMouseEvent) {
-		if (!e.features || e.features.length === 0) {
-			return;
-		}
-
 		const map = e.target;
-		const feature = e.features[0];
+		const feature = e.features?.[0];
 
-		if (feature.layer?.id === pinsClusterLayer.id) {
+		if (feature?.layer?.id === pinsClusterLayer.id) {
 			const clusterId = feature.properties?.cluster_id as number;
 			if (clusterId) {
 				const source = map.getSource(pinSourceId) as maplibregl.GeoJSONSource;
@@ -94,15 +98,20 @@ function MapComponent() {
 					center: (feature.geometry as GeoJSON.Point).coordinates as LngLatLike,
 				});
 			}
-		} else if (
-			feature.layer?.id === pinsUnclusteredPointLayer.id ||
-			feature.layer?.id === pinsTookDownLayer.id
+			return;
+		}
+
+		if (
+			feature?.layer?.id === pinsUnclusteredPointLayer.id ||
+			feature?.layer?.id === pinsTookDownLayer.id ||
+			feature?.layer?.id === pinsPlannedLayer.id
 		) {
+			const hangAtRaw = feature.properties?.hangAt;
 			setMode({
 				mode: "focused-pin",
 				focusedPin: {
 					id: feature.properties?.id as string,
-					hangAt: new Date(feature.properties?.hangAt as number),
+					hangAt: hangAtRaw != null ? new Date(hangAtRaw as number) : null,
 					tookDownAt:
 						feature.properties?.tookDownAt != null
 							? new Date(feature.properties.tookDownAt as number)
@@ -116,6 +125,15 @@ function MapComponent() {
 				zoom: map.getZoom() < 18 ? 18 : map.getZoom(),
 				padding: { top: 0, bottom: bottomPadding, left: 0, right: 0 },
 			});
+			return;
+		}
+
+		if (mode.mode === "planning") {
+			addPlannedPinMutation.mutate({
+				latitude: e.lngLat.lat,
+				longitude: e.lngLat.lng,
+				campaignId: campaignId,
+			});
 		}
 	}
 
@@ -127,7 +145,7 @@ function MapComponent() {
 	}
 
 	function onMouseLeave() {
-		setCursor("grab");
+		setCursor(mode.mode === "planning" ? "crosshair" : "grab");
 	}
 
 	const geolocation = useGeolocation({

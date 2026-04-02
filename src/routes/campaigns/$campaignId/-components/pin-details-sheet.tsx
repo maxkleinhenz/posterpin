@@ -14,6 +14,7 @@ import {
 import { AddPin, RemovePin } from "@/icons";
 import {
 	useHangAgainPinMutation,
+	useRemovePinMutation,
 	useTakeDownPinMutation,
 } from "@/queries/pins";
 import { useAppStore } from "@/store/app-store";
@@ -21,6 +22,7 @@ import { useAppStore } from "@/store/app-store";
 export default function PinDetailsSheet() {
 	const takePinDownMutation = useTakeDownPinMutation();
 	const hangAgainPinMutation = useHangAgainPinMutation();
+	const removePinMutation = useRemovePinMutation();
 
 	const [open, setOpen] = useState(false);
 	const { mode, setMode } = useAppStore(
@@ -54,13 +56,39 @@ export default function PinDetailsSheet() {
 				<SheetHeader>
 					<SheetTitle>Plakat</SheetTitle>
 					<SheetDescription>
-						{focusedPin?.tookDownAt != null
-							? `Abgehangen am ${focusedPin.tookDownAt.toLocaleString()}`
-							: `Gehangen am ${focusedPin?.hangAt.toLocaleString()}`}
+						{focusedPin?.hangAt == null
+							? "Noch nicht aufgehangen (geplant)"
+							: focusedPin.tookDownAt != null
+								? `Abgehangen am ${focusedPin.tookDownAt.toLocaleString()}`
+								: `Gehangen am ${focusedPin.hangAt.toLocaleString()}`}
 					</SheetDescription>
 				</SheetHeader>
 				<div className="p-4">
-					{focusedPin == null ? null : focusedPin.tookDownAt == null ? (
+					{focusedPin == null ? null : focusedPin.hangAt == null ? (
+						<div className="flex gap-2">
+							<Button
+								variant="default"
+								onClick={() => {
+									hangAgainPinMutation.mutate({
+										id: focusedPin.id as Id<"pins">,
+										hangAt: Date.now(),
+									});
+									close();
+								}}
+							>
+								<AddPin /> Jetzt aufhängen
+							</Button>
+							<Button
+								variant="destructive"
+								onClick={() => {
+									removePinMutation.mutate(focusedPin.id as Id<"pins">);
+									close();
+								}}
+							>
+								<RemovePin /> Löschen
+							</Button>
+						</div>
+					) : focusedPin.tookDownAt == null ? (
 						<Button
 							variant="destructive"
 							onClick={() => {

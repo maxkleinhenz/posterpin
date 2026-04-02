@@ -141,6 +141,102 @@ export function useTakeDownPinMutation() {
 	});
 }
 
+export const useRemovePinMutation = () => {
+	const queryClient = useQueryClient();
+	const convex = useConvex();
+
+	return useMutation({
+		mutationFn: async (pinId: Id<"pins">) => {
+			return await convex.mutation(api.pins.remove, { id: pinId });
+		},
+		onMutate: async (pinId) => {
+			const existingPin = await getPinById(queryClient, convex, pinId);
+			if (!existingPin) throw new Error("Pin not found");
+
+			await queryClient.cancelQueries({
+				queryKey: pinQueries.list(existingPin.campaignId).queryKey,
+			});
+
+			const previousPins = queryClient.getQueryData<Pin[]>(
+				pinQueries.list(existingPin.campaignId).queryKey,
+			);
+
+			queryClient.setQueryData<Pin[]>(
+				pinQueries.list(existingPin.campaignId).queryKey,
+				(old) => old?.filter((p) => p._id !== pinId) ?? [],
+			);
+
+			return { previousPins, campaignId: existingPin.campaignId };
+		},
+		onError: (_error, _variables, context) => {
+			if (context?.previousPins) {
+				queryClient.setQueryData(
+					pinQueries.list(context.campaignId).queryKey,
+					context.previousPins,
+				);
+			}
+		},
+		onSettled: (_data, _error, _variables, context) => {
+			if (context?.campaignId) {
+				queryClient.invalidateQueries({
+					queryKey: pinQueries.list(context.campaignId).queryKey,
+				});
+			}
+		},
+	});
+};
+
+export const useAddPlannedPinMutation = () => {
+	const queryClient = useQueryClient();
+	const convex = useConvex();
+
+	return useMutation({
+		mutationFn: async (pin: InsertPin) => {
+			return await convex.mutation(api.pins.addPlanned, pin);
+		},
+		onMutate: async (pin) => {
+			await queryClient.cancelQueries({
+				queryKey: pinQueries.list(pin.campaignId).queryKey,
+			});
+
+			const previousPins = queryClient.getQueryData<Pin[]>(
+				pinQueries.list(pin.campaignId).queryKey,
+			);
+
+			const optimisticPin: Pin = {
+				...pin,
+				_id: "temp_id" as Id<"pins">,
+				_creationTime: Date.now(),
+				hangAt: null,
+				tookDownAt: null,
+			};
+
+			queryClient.setQueryData<Pin[]>(
+				pinQueries.list(pin.campaignId).queryKey,
+				(old) => {
+					if (!old) return [optimisticPin];
+					return [optimisticPin, ...old];
+				},
+			);
+
+			return { previousPins, campaignId: pin.campaignId };
+		},
+		onError: (_error, _variables, context) => {
+			if (context?.previousPins) {
+				queryClient.setQueryData(
+					pinQueries.list(context.campaignId).queryKey,
+					context.previousPins,
+				);
+			}
+		},
+		onSettled: (_data, _error, context) => {
+			queryClient.invalidateQueries({
+				queryKey: pinQueries.list(context.campaignId).queryKey,
+			});
+		},
+	});
+};
+
 export function useHangAgainPinMutation() {
 	const queryClient = useQueryClient();
 	const convex = useConvex();

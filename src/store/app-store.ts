@@ -9,12 +9,15 @@ export type Mode =
 			focusedPin: FocusedPin;
 	  }
 	| {
+			mode: "planning";
+	  }
+	| {
 			mode: "none";
 	  };
 
 export type FocusedPin = {
 	id: string;
-	hangAt: Date;
+	hangAt: Date | null;
 	tookDownAt: Date | null;
 };
 
