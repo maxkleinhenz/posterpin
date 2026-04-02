@@ -92,11 +92,11 @@ export default function PinSettingsPopup() {
 							<div>
 								<ItemTitle>Plakate anzeigen</ItemTitle>
 							</div>
-							<div className="grid gap-2">
+							<div className="grid">
 								{filterItems.map(({ key, label, color }) => (
 									<Label
 										key={key}
-										className="flex items-center gap-2 cursor-pointer font-normal"
+										className="flex items-center gap-2 cursor-pointer font-normal py-2"
 									>
 										<Checkbox
 											checked={pinFilter[key]}
