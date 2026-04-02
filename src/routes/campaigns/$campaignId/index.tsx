@@ -37,11 +37,11 @@ import PinDetailsSheet from "./-components/pin-details-sheet";
 import PinsLayer, {
 	hungClusterLayer,
 	hungSourceId,
-	plannedClusterLayer,
-	plannedSourceId,
 	pinsPlannedLayer,
 	pinsTookDownLayer,
 	pinsUnclusteredPointLayer,
+	plannedClusterLayer,
+	plannedSourceId,
 	tookDownClusterLayer,
 	tookDownSourceId,
 } from "./-components/pin-layer";
@@ -88,7 +88,6 @@ function MapComponent() {
 
 	const campaign = useSuspenseQuery(campaignsQueries.getById(campaignId));
 
-	const [disableAccuracyCircle, setDisableAccuracyCircle] = useState(true);
 	const [cursor, setCursor] = useState<string>("grab");
 	const [draggingPin, setDraggingPin] = useState<DraggingPin | null>(null);
 	const wasDraggedRef = useRef(false);
@@ -280,10 +279,7 @@ function MapComponent() {
 					onMouseEnter={onMouseEnter}
 					onMouseLeave={onMouseLeave}
 				>
-					<AccuracyCricle
-						disable={disableAccuracyCircle}
-						geolocation={geolocation}
-					/>
+					<AccuracyCricle geolocation={geolocation} />
 					<Marker
 						longitude={geolocation.longitude}
 						latitude={geolocation.latitude}
@@ -292,12 +288,7 @@ function MapComponent() {
 						<div className="size-5 rounded-full bg-blue-600 border-2 border-white shadow-md"></div>
 					</Marker>
 					<PinsLayer draggingPin={draggingPin} />
-					<MapControls
-						geolocation={geolocation}
-						toggleaAcuracyCircle={() =>
-							setDisableAccuracyCircle((prev) => !prev)
-						}
-					/>
+					<MapControls geolocation={geolocation} />
 					<PinControl geolocation={geolocation} />
 					<MenuSheet campaign={campaign.data} />
 				</MapLibre>

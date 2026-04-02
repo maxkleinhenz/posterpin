@@ -1,7 +1,9 @@
-import "maplibre-gl/dist/maplibre-gl.css";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
 import type { Id } from "convex/_generated/dataModel";
+import { pinQueries } from "@/queries/pins";
+import { useAppStore } from "@/store/app-store";
+import "maplibre-gl/dist/maplibre-gl.css";
 import { useMemo } from "react";
 import {
 	type GeoJSONSourceSpecification,
@@ -9,7 +11,7 @@ import {
 	type LayerProps,
 	Source,
 } from "react-map-gl/maplibre";
-import { pinQueries } from "@/queries/pins";
+import { useShallow } from "zustand/react/shallow";
 
 export const hungSourceId = "pins-source-hung";
 export const tookDownSourceId = "pins-source-took-down";
@@ -125,7 +127,13 @@ export const pinsPlannedLayer = {
 type DraggingPin = { id: string; latitude: number; longitude: number };
 
 function toFeature(
-	pin: { _id: string; longitude: number; latitude: number; hangAt?: number | null; tookDownAt?: number | null },
+	pin: {
+		_id: string;
+		longitude: number;
+		latitude: number;
+		hangAt?: number | null;
+		tookDownAt?: number | null;
+	},
 	draggingPin?: DraggingPin | null,
 ): GeoJSON.Feature {
 	const isDragging = draggingPin != null && pin._id === draggingPin.id;
@@ -160,6 +168,10 @@ export default function PinsLayer({
 	const { campaignId } = useParams({ from: "/campaigns/$campaignId/" });
 	const pins = useQuery(pinQueries.list(campaignId as Id<"campaigns">));
 
+	const { pinFilter } = useAppStore(
+		useShallow((state) => ({ pinFilter: state.pinFilter })),
+	);
+
 	const { hungGeoJSON, tookDownGeoJSON, plannedGeoJSON } = useMemo(() => {
 		if (!pins.data) return {};
 
@@ -186,21 +198,45 @@ export default function PinsLayer({
 
 	return (
 		<>
-			<Source id={hungSourceId} cluster clusterMaxZoom={16} clusterRadius={30} {...hungGeoJSON}>
-				<Layer {...hungClusterLayer} />
-				<Layer {...hungClusterCountLayer} />
-				<Layer {...pinsUnclusteredPointLayer} />
-			</Source>
-			<Source id={tookDownSourceId} cluster clusterMaxZoom={16} clusterRadius={30} {...tookDownGeoJSON}>
-				<Layer {...tookDownClusterLayer} />
-				<Layer {...tookDownClusterCountLayer} />
-				<Layer {...pinsTookDownLayer} />
-			</Source>
-			<Source id={plannedSourceId} cluster clusterMaxZoom={16} clusterRadius={30} {...plannedGeoJSON}>
-				<Layer {...plannedClusterLayer} />
-				<Layer {...plannedClusterCountLayer} />
-				<Layer {...pinsPlannedLayer} />
-			</Source>
+			{pinFilter.hung && (
+				<Source
+					id={hungSourceId}
+					cluster
+					clusterMaxZoom={16}
+					clusterRadius={30}
+					{...hungGeoJSON}
+				>
+					<Layer {...hungClusterLayer} />
+					<Layer {...hungClusterCountLayer} />
+					<Layer {...pinsUnclusteredPointLayer} />
+				</Source>
+			)}
+			{pinFilter.tookDown && (
+				<Source
+					id={tookDownSourceId}
+					cluster
+					clusterMaxZoom={16}
+					clusterRadius={30}
+					{...tookDownGeoJSON}
+				>
+					<Layer {...tookDownClusterLayer} />
+					<Layer {...tookDownClusterCountLayer} />
+					<Layer {...pinsTookDownLayer} />
+				</Source>
+			)}
+			{pinFilter.planned && (
+				<Source
+					id={plannedSourceId}
+					cluster
+					clusterMaxZoom={16}
+					clusterRadius={30}
+					{...plannedGeoJSON}
+				>
+					<Layer {...plannedClusterLayer} />
+					<Layer {...plannedClusterCountLayer} />
+					<Layer {...pinsPlannedLayer} />
+				</Source>
+			)}
 		</>
 	);
 }

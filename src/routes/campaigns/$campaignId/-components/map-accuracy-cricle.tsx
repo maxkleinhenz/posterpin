@@ -9,6 +9,8 @@ import {
 	Layer,
 	Source,
 } from "react-map-gl/maplibre";
+import { useShallow } from "zustand/react/shallow";
+import { useAppStore } from "@/store/app-store";
 
 // Helper function to create a circle GeoJSON
 function createGeoJSONCircle(center: [number, number], radiusInMeters: number) {
@@ -24,12 +26,16 @@ function createGeoJSONCircle(center: [number, number], radiusInMeters: number) {
 }
 
 export default function AccuracyCricle({
-	disable,
 	geolocation,
 }: {
-	disable?: boolean;
 	geolocation: GeolocationState;
 }) {
+	const { isAuracyVisible } = useAppStore(
+		useShallow((state) => ({
+			isAuracyVisible: state.isAuracyVisible,
+		})),
+	);
+
 	const accuracyCricle = useMemo(() => {
 		if (
 			geolocation.longitude == null ||
@@ -56,7 +62,7 @@ export default function AccuracyCricle({
 		return geoJson;
 	}, [geolocation.accuracy, geolocation.latitude, geolocation.longitude]);
 
-	if (disable) {
+	if (!isAuracyVisible) {
 		return null;
 	}
 

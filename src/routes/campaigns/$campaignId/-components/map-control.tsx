@@ -1,27 +1,20 @@
 import type { GeolocationState } from "@uidotdev/usehooks";
-import {
-	LocateFixed,
-	Navigation2,
-	Settings,
-	ZoomIn,
-	ZoomOut,
-} from "lucide-react";
-import "maplibre-gl/dist/maplibre-gl.css";
-import { useEffect, useState } from "react";
-import { useMap } from "react-map-gl/maplibre";
+import { LocateFixed, Navigation2, ZoomIn, ZoomOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import "maplibre-gl/dist/maplibre-gl.css";
+import { useEffect, useState } from "react";
+import { useMap } from "react-map-gl/maplibre";
+import PinSettingsPopup from "./pin-settings";
 
 export default function MapControls({
 	geolocation,
-	toggleaAcuracyCircle,
 }: {
 	geolocation: GeolocationState;
-	toggleaAcuracyCircle: () => void;
 }) {
 	const { current: map } = useMap();
 	const [bearing, setBearing] = useState(0);
@@ -51,18 +44,10 @@ export default function MapControls({
 			<div className="grid gap-2 p-1 bg-background rounded-md shadow-md">
 				<Tooltip>
 					<TooltipTrigger asChild>
-						<Button
-							className="p-5"
-							variant="ghost"
-							size="icon-lg"
-							onClick={toggleaAcuracyCircle}
-						>
-							<Settings className="size-5" />
-							<span className="sr-only">Toogle Genauigkeitskreis</span>
-						</Button>
+						<PinSettingsPopup />
 					</TooltipTrigger>
 					<TooltipContent className="px-2 py-1 text-xs" side="left">
-						Toogle Genauigkeitskreis
+						Einstellungen
 					</TooltipContent>
 				</Tooltip>
 			</div>
