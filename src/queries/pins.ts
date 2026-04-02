@@ -141,6 +141,65 @@ export function useTakeDownPinMutation() {
 	});
 }
 
+export const useUpdatePinPositionMutation = () => {
+	const queryClient = useQueryClient();
+	const convex = useConvex();
+
+	return useMutation({
+		mutationFn: async ({
+			id,
+			latitude,
+			longitude,
+		}: {
+			id: Id<"pins">;
+			latitude: number;
+			longitude: number;
+		}) => {
+			return await convex.mutation(api.pins.updatePosition, {
+				id,
+				latitude,
+				longitude,
+			});
+		},
+		onMutate: async ({ id, latitude, longitude }) => {
+			const existingPin = await getPinById(queryClient, convex, id);
+			if (!existingPin) throw new Error("Pin not found");
+
+			await queryClient.cancelQueries({
+				queryKey: pinQueries.list(existingPin.campaignId).queryKey,
+			});
+
+			const previousPins = queryClient.getQueryData<Pin[]>(
+				pinQueries.list(existingPin.campaignId).queryKey,
+			);
+
+			queryClient.setQueryData<Pin[]>(
+				pinQueries.list(existingPin.campaignId).queryKey,
+				(old) =>
+					old?.map((p) => (p._id === id ? { ...p, latitude, longitude } : p)) ??
+					[],
+			);
+
+			return { previousPins, campaignId: existingPin.campaignId };
+		},
+		onError: (_error, _variables, context) => {
+			if (context?.previousPins) {
+				queryClient.setQueryData(
+					pinQueries.list(context.campaignId).queryKey,
+					context.previousPins,
+				);
+			}
+		},
+		onSettled: (_data, _error, _variables, context) => {
+			if (context?.campaignId) {
+				queryClient.invalidateQueries({
+					queryKey: pinQueries.list(context.campaignId).queryKey,
+				});
+			}
+		},
+	});
+};
+
 export const useRemovePinMutation = () => {
 	const queryClient = useQueryClient();
 	const convex = useConvex();

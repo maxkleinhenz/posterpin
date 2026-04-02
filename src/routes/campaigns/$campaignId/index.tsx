@@ -8,7 +8,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import type { Id } from "convex/_generated/dataModel";
 import { ArrowLeft } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import MapLibre, {
 	type LngLatLike,
 	type MapLayerMouseEvent,
@@ -23,7 +23,11 @@ import {
 } from "@/components/ui/tooltip";
 import { env } from "@/env";
 import { campaignsQueries } from "@/queries/campaigns";
-import { pinQueries, useAddPlannedPinMutation } from "@/queries/pins";
+import {
+	pinQueries,
+	useAddPlannedPinMutation,
+	useUpdatePinPositionMutation,
+} from "@/queries/pins";
 import { useAppStore } from "@/store/app-store";
 import AccuracyCricle from "./-components/map-accuracy-cricle";
 import MapControls from "./-components/map-control";
@@ -64,6 +68,8 @@ function RouteComponent() {
 	);
 }
 
+type DraggingPin = { id: string; latitude: number; longitude: number };
+
 function MapComponent() {
 	const navigate = useNavigate();
 	const campaignId = Route.useParams().campaignId as Id<"campaigns">;
@@ -72,6 +78,9 @@ function MapComponent() {
 
 	const [disableAccuracyCircle, setDisableAccuracyCircle] = useState(true);
 	const [cursor, setCursor] = useState<string>("grab");
+	const [draggingPin, setDraggingPin] = useState<DraggingPin | null>(null);
+	const wasDraggedRef = useRef(false);
+
 	const { mode, setMode } = useAppStore(
 		useShallow((state) => ({
 			mode: state.mode,
@@ -79,12 +88,18 @@ function MapComponent() {
 		})),
 	);
 	const addPlannedPinMutation = useAddPlannedPinMutation();
+	const updatePositionMutation = useUpdatePinPositionMutation();
 
 	useEffect(() => {
 		setCursor(mode.mode === "planning" ? "crosshair" : "grab");
 	}, [mode.mode]);
 
 	async function onMapClick(e: MapLayerMouseEvent) {
+		if (wasDraggedRef.current) {
+			wasDraggedRef.current = false;
+			return;
+		}
+
 		const map = e.target;
 		const feature = e.features?.[0];
 
@@ -137,14 +152,57 @@ function MapComponent() {
 		}
 	}
 
+	function onMouseDown(e: MapLayerMouseEvent) {
+		const feature = e.features?.[0];
+		if (feature?.layer?.id !== pinsPlannedLayer.id) return;
+
+		const coords = (feature.geometry as GeoJSON.Point).coordinates;
+		wasDraggedRef.current = false;
+		setDraggingPin({
+			id: feature.properties?.id as string,
+			longitude: coords[0],
+			latitude: coords[1],
+		});
+		e.target.dragPan.disable();
+		setCursor("grabbing");
+	}
+
+	function onMouseMove(e: MapLayerMouseEvent) {
+		if (!draggingPin) return;
+		wasDraggedRef.current = true;
+		setDraggingPin({
+			...draggingPin,
+			latitude: e.lngLat.lat,
+			longitude: e.lngLat.lng,
+		});
+	}
+
+	function onMouseUp(e: MapLayerMouseEvent) {
+		if (!draggingPin) return;
+		if (wasDraggedRef.current) {
+			updatePositionMutation.mutate({
+				id: draggingPin.id as Id<"pins">,
+				latitude: e.lngLat.lat,
+				longitude: e.lngLat.lng,
+			});
+		}
+		setDraggingPin(null);
+		e.target.dragPan.enable();
+		setCursor(mode.mode === "planning" ? "crosshair" : "grab");
+	}
+
 	function onMouseEnter(e: MapLayerMouseEvent) {
+		if (draggingPin) return;
 		const feature = e.features?.[0];
 		if (interactiveLayerIds.some((layerId) => layerId === feature?.layer.id)) {
-			setCursor("pointer");
+			setCursor(
+				feature?.layer?.id === pinsPlannedLayer.id ? "grab" : "pointer",
+			);
 		}
 	}
 
 	function onMouseLeave() {
+		if (draggingPin) return;
 		setCursor(mode.mode === "planning" ? "crosshair" : "grab");
 	}
 
@@ -203,6 +261,9 @@ function MapComponent() {
 					interactiveLayerIds={interactiveLayerIds as unknown as string[]}
 					cursor={cursor}
 					onClick={onMapClick}
+					onMouseDown={onMouseDown}
+					onMouseMove={onMouseMove}
+					onMouseUp={onMouseUp}
 					onMouseEnter={onMouseEnter}
 					onMouseLeave={onMouseLeave}
 				>
@@ -217,7 +278,7 @@ function MapComponent() {
 					>
 						<div className="size-5 rounded-full bg-blue-600 border-2 border-white shadow-md"></div>
 					</Marker>
-					<PinsLayer />
+					<PinsLayer draggingPin={draggingPin} />
 					<MapControls
 						geolocation={geolocation}
 						toggleaAcuracyCircle={() =>

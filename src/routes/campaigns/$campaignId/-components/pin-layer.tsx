@@ -84,12 +84,17 @@ export const pinsPlannedLayer = {
 		"circle-color": "#3b82f6",
 		"circle-stroke-width": 2,
 		"circle-stroke-color": "#ffffff",
-		// "circle-stroke-dasharray": [2, 2],
 		"circle-opacity": 0.85,
 	},
 } as const satisfies LayerProps;
 
-export default function PinsLayer() {
+type DraggingPin = { id: string; latitude: number; longitude: number };
+
+export default function PinsLayer({
+	draggingPin,
+}: {
+	draggingPin?: DraggingPin | null;
+}) {
 	const { campaignId } = useParams({ from: "/campaigns/$campaignId/" });
 	const pins = useQuery(pinQueries.list(campaignId as Id<"campaigns">));
 
@@ -100,21 +105,26 @@ export default function PinsLayer() {
 			type: "geojson" as const,
 			data: {
 				type: "FeatureCollection" as const,
-				features: pins.data.map((pin) => ({
-					type: "Feature" as const,
-					geometry: {
-						type: "Point" as const,
-						coordinates: [pin.longitude, pin.latitude],
-					},
-					properties: {
-						id: pin._id,
-						hangAt: pin.hangAt ?? null,
-						tookDownAt: pin.tookDownAt ?? null,
-					},
-				})),
+				features: pins.data.map((pin) => {
+					const isDragging = draggingPin != null && pin._id === draggingPin.id;
+					return {
+						type: "Feature" as const,
+						geometry: {
+							type: "Point" as const,
+							coordinates: isDragging
+								? [draggingPin.longitude, draggingPin.latitude]
+								: [pin.longitude, pin.latitude],
+						},
+						properties: {
+							id: pin._id,
+							hangAt: pin.hangAt ?? null,
+							tookDownAt: pin.tookDownAt ?? null,
+						},
+					};
+				}),
 			},
 		} satisfies GeoJSONSourceSpecification;
-	}, [pins.data]);
+	}, [pins.data, draggingPin]);
 
 	if (!pinsGeoJSON) return null;
 

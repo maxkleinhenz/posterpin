@@ -65,6 +65,13 @@ export const addPlanned = mutation({
 	},
 });
 
+export const updatePosition = mutation({
+	args: { id: v.id("pins"), latitude: v.number(), longitude: v.number() },
+	handler: async (ctx, { id, latitude, longitude }) => {
+		await ctx.db.patch(id, { latitude, longitude });
+	},
+});
+
 export const remove = mutation({
 	args: { id: v.id("pins") },
 	handler: async (ctx, { id }) => {
