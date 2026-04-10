@@ -92,7 +92,7 @@ export default function MapControls({
 	}
 
 	return (
-		<div className="absolute bottom-10 right-2 grid gap-2">
+		<div className="absolute bottom-10 right-4 grid gap-2">
 			<div className="grid gap-2 p-1 bg-background rounded-md shadow-md">
 				<PinSettingsPopup />
 			</div>

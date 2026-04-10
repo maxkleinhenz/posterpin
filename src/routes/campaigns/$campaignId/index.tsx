@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from "react";
 import MapLibre, {
 	type LngLatLike,
 	type MapLayerMouseEvent,
+	MapProvider,
 	Marker,
 } from "react-map-gl/maplibre";
 import { useShallow } from "zustand/react/shallow";
@@ -286,72 +287,73 @@ function MapComponent() {
 	}
 
 	return (
-		<div className="h-dvh w-screen relative">
-			<div className="absolute inset-0">
-				<MapLibre
-					initialViewState={{
-						longitude: geolocation.longitude,
-						latitude: geolocation.latitude,
-						zoom: 16,
-					}}
-					// dragRotate={false}
-					pitchWithRotate={false}
-					keyboard={false}
-					style={{ width: "100%", height: "100%" }}
-					mapStyle={`https://api.maptiler.com/maps/streets/style.json?key=${env.VITE_MAPTILER_KEY}`}
-					interactiveLayerIds={interactiveLayerIds as unknown as string[]}
-					cursor={cursor}
-					onClick={onMapClick}
-					onMouseDown={onMouseDown}
-					onMouseMove={onMouseMove}
-					onMouseUp={onMouseUp}
-					onMouseEnter={onMouseEnter}
-					onMouseLeave={onMouseLeave}
-					// onTouchStart={onTouchStart}
-					// onTouchMove={onTouchMove}
-					// onTouchEnd={onTouchEnd}
-				>
-					<AccuracyCricle geolocation={geolocation} />
-					{hasLocation && (
-						<Marker
-							longitude={geolocation.longitude}
-							latitude={geolocation.latitude}
-							anchor="bottom"
-						>
-							<div className="size-5 rounded-full bg-blue-600 border-2 border-white shadow-md"></div>
-						</Marker>
-					)}
-					<PinsLayer draggingPin={draggingPin} />
-					<MapControls geolocation={geolocation} />
-					<PinControl canSetPins={hasLocation} geolocation={geolocation} />
-					<MenuSheet campaign={campaign.data} />
-				</MapLibre>
-			</div>
-			<div className="absolute top-2 left-2 flex gap-2">
-				<div className="flex items-center gap-2 p-1 bg-background rounded-md shadow-md">
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<Button
-								className="p-5"
-								variant="ghost"
-								size="icon-lg"
-								onClick={() => navigate({ to: "/" })}
+		<MapProvider>
+			<div className="h-dvh w-screen relative">
+				<div className="absolute inset-0">
+					<MapLibre
+						initialViewState={{
+							longitude: geolocation.longitude,
+							latitude: geolocation.latitude,
+							zoom: 16,
+						}}
+						// dragRotate={false}
+						pitchWithRotate={false}
+						keyboard={false}
+						style={{ width: "100%", height: "100%" }}
+						mapStyle={`https://api.maptiler.com/maps/streets/style.json?key=${env.VITE_MAPTILER_KEY}`}
+						interactiveLayerIds={interactiveLayerIds as unknown as string[]}
+						cursor={cursor}
+						onClick={onMapClick}
+						onMouseDown={onMouseDown}
+						onMouseMove={onMouseMove}
+						onMouseUp={onMouseUp}
+						onMouseEnter={onMouseEnter}
+						onMouseLeave={onMouseLeave}
+						// onTouchStart={onTouchStart}
+						// onTouchMove={onTouchMove}
+						// onTouchEnd={onTouchEnd}
+					>
+						<AccuracyCricle geolocation={geolocation} />
+						{hasLocation && (
+							<Marker
+								longitude={geolocation.longitude}
+								latitude={geolocation.latitude}
+								anchor="bottom"
 							>
-								<ArrowLeft />
-							</Button>
-						</TooltipTrigger>
-						<TooltipContent className="px-2 py-1 text-xs" side="bottom">
-							Zurück
-						</TooltipContent>
-					</Tooltip>
+								<div className="size-5 rounded-full bg-blue-600 border-2 border-white shadow-md"></div>
+							</Marker>
+						)}
+						<PinsLayer draggingPin={draggingPin} />
+						<MapControls geolocation={geolocation} />
+						<PinControl canSetPins={hasLocation} geolocation={geolocation} />
+					</MapLibre>
 				</div>
-				<div className="flex items-center gap-2 p-1 bg-background rounded-md shadow-md">
-					<MenuSheet campaign={campaign.data} />
+				<div className="absolute top-4 left-4 flex gap-2">
+					<div className="flex items-center gap-2 p-1 bg-background rounded-md shadow-md">
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button
+									className="p-5"
+									variant="ghost"
+									size="icon-lg"
+									onClick={() => navigate({ to: "/" })}
+								>
+									<ArrowLeft />
+								</Button>
+							</TooltipTrigger>
+							<TooltipContent className="px-2 py-1 text-xs" side="bottom">
+								Zurück
+							</TooltipContent>
+						</Tooltip>
+					</div>
+					<div className="flex items-center gap-2 py-1 px-1 pe-4 bg-background rounded-md shadow-md">
+						<MenuSheet campaign={campaign.data} />
 
-					<h1 className="text font-semibold">{campaign.data?.name}</h1>
+						<h1 className="text font-semibold">{campaign.data?.name}</h1>
+					</div>
 				</div>
+				<PinDetailsSheet />
 			</div>
-			<PinDetailsSheet />
-		</div>
+		</MapProvider>
 	);
 }
