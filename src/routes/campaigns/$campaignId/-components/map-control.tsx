@@ -1,4 +1,3 @@
-import type { GeolocationState } from "@uidotdev/usehooks";
 import { LocateFixed, Navigation2, ZoomIn, ZoomOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -6,6 +5,7 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import type { GeolocationState } from "@/lib/use-geolocation";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useEffect, useState } from "react";
 import { useMap } from "react-map-gl/maplibre";

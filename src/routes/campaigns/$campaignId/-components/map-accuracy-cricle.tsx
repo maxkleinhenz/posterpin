@@ -1,6 +1,5 @@
 /** biome-ignore-all lint/correctness/useUniqueElementIds: layer and source IDs are fixed map style IDs by design */
 
-import type { GeolocationState } from "@uidotdev/usehooks";
 import "maplibre-gl/dist/maplibre-gl.css";
 import * as turf from "@turf/turf";
 import { useMemo } from "react";
@@ -10,6 +9,7 @@ import {
 	Source,
 } from "react-map-gl/maplibre";
 import { useShallow } from "zustand/react/shallow";
+import type { GeolocationState } from "@/lib/use-geolocation";
 import { useAppStore } from "@/store/app-store";
 
 // Helper function to create a circle GeoJSON

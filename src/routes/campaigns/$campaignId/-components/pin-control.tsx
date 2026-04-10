@@ -1,16 +1,18 @@
 import { useParams } from "@tanstack/react-router";
-import type { GeolocationState } from "@uidotdev/usehooks";
 import type { Id } from "convex/_generated/dataModel";
 import { MapIcon } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { Button } from "@/components/ui/button";
 import { AddPin } from "@/icons";
+import type { GeolocationState } from "@/lib/use-geolocation";
 import { useAddPinMutation } from "@/queries/pins";
 import { useAppStore } from "@/store/app-store";
 
 export default function PinControl({
+	canSetPins,
 	geolocation,
 }: {
+	canSetPins?: boolean;
 	geolocation: GeolocationState;
 }) {
 	const { campaignId } = useParams({ from: "/campaigns/$campaignId/" });
@@ -44,7 +46,7 @@ export default function PinControl({
 
 	return (
 		<div className="flex gap-2 absolute left-1/2 -translate-x-1/2 bottom-10 justify-center">
-			{longitude != null && latitude != null && (
+			{canSetPins && longitude != null && latitude != null && (
 				<Button
 					className="shadow-md p-6"
 					size="lg"

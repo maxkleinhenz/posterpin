@@ -1,4 +1,3 @@
-import { useMeasure } from "@uidotdev/usehooks";
 import { SlidersHorizontal } from "lucide-react";
 import { useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";

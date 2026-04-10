@@ -3,7 +3,6 @@ import {
 	createFileRoute,
 	useNavigate,
 } from "@tanstack/react-router";
-import { useGeolocation } from "@uidotdev/usehooks";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import type { Id } from "convex/_generated/dataModel";
@@ -12,7 +11,6 @@ import { useEffect, useRef, useState } from "react";
 import MapLibre, {
 	type LngLatLike,
 	type MapLayerMouseEvent,
-	type MapLayerTouchEvent,
 	Marker,
 } from "react-map-gl/maplibre";
 import { useShallow } from "zustand/react/shallow";
@@ -23,6 +21,7 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { env } from "@/env";
+import { useGeolocation } from "@/lib/use-geolocation";
 import { campaignsQueries } from "@/queries/campaigns";
 import {
 	pinQueries,
@@ -101,6 +100,13 @@ function MapComponent() {
 	);
 	const addPlannedPinMutation = useAddPlannedPinMutation();
 	const updatePositionMutation = useUpdatePinPositionMutation();
+
+	const geolocation = useGeolocation({
+		enableHighAccuracy: true,
+		maximumAge: 10000,
+		timeout: 5000,
+		autoStart: true,
+	});
 
 	useEffect(() => {
 		setCursor(mode.mode === "planning" ? "crosshair" : "grab");
@@ -204,42 +210,42 @@ function MapComponent() {
 		setCursor(mode.mode === "planning" ? "crosshair" : "grab");
 	}
 
-	function onTouchStart(e: MapLayerTouchEvent) {
-		const feature = e.features?.[0];
-		if (feature?.layer?.id !== pinsPlannedLayer.id) return;
+	// function onTouchStart(e: MapLayerTouchEvent) {
+	// 	const feature = e.features?.[0];
+	// 	if (feature?.layer?.id !== pinsPlannedLayer.id) return;
 
-		const coords = (feature.geometry as GeoJSON.Point).coordinates;
-		wasDraggedRef.current = false;
-		setDraggingPin({
-			id: feature.properties?.id as string,
-			longitude: coords[0],
-			latitude: coords[1],
-		});
-		e.target.dragPan.disable();
-	}
+	// 	const coords = (feature.geometry as GeoJSON.Point).coordinates;
+	// 	wasDraggedRef.current = false;
+	// 	setDraggingPin({
+	// 		id: feature.properties?.id as string,
+	// 		longitude: coords[0],
+	// 		latitude: coords[1],
+	// 	});
+	// 	e.target.dragPan.disable();
+	// }
 
-	function onTouchMove(e: MapLayerTouchEvent) {
-		if (!draggingPin) return;
-		wasDraggedRef.current = true;
-		setDraggingPin({
-			...draggingPin,
-			latitude: e.lngLat.lat,
-			longitude: e.lngLat.lng,
-		});
-	}
+	// function onTouchMove(e: MapLayerTouchEvent) {
+	// 	if (!draggingPin) return;
+	// 	wasDraggedRef.current = true;
+	// 	setDraggingPin({
+	// 		...draggingPin,
+	// 		latitude: e.lngLat.lat,
+	// 		longitude: e.lngLat.lng,
+	// 	});
+	// }
 
-	function onTouchEnd(e: MapLayerTouchEvent) {
-		if (!draggingPin) return;
-		if (wasDraggedRef.current) {
-			updatePositionMutation.mutate({
-				id: draggingPin.id as Id<"pins">,
-				latitude: draggingPin.latitude,
-				longitude: draggingPin.longitude,
-			});
-		}
-		setDraggingPin(null);
-		e.target.dragPan.enable();
-	}
+	// function onTouchEnd(e: MapLayerTouchEvent) {
+	// 	if (!draggingPin) return;
+	// 	if (wasDraggedRef.current) {
+	// 		updatePositionMutation.mutate({
+	// 			id: draggingPin.id as Id<"pins">,
+	// 			latitude: draggingPin.latitude,
+	// 			longitude: draggingPin.longitude,
+	// 		});
+	// 	}
+	// 	setDraggingPin(null);
+	// 	e.target.dragPan.enable();
+	// }
 
 	function onMouseEnter(e: MapLayerMouseEvent) {
 		if (draggingPin) return;
@@ -256,24 +262,10 @@ function MapComponent() {
 		setCursor(mode.mode === "planning" ? "crosshair" : "grab");
 	}
 
-	const geolocation = useGeolocation({
-		enableHighAccuracy: true,
-		maximumAge: 10000,
-		timeout: 5000,
-	});
-
 	if (campaign.isLoading || campaign.data == null) {
 		return (
 			<div className="h-screen w-screen">
 				<p>Loading</p>
-			</div>
-		);
-	}
-
-	if (geolocation.loading) {
-		return (
-			<div className="h-screen w-screen">
-				<p>loading... (you may need to enable permissions)</p>
 			</div>
 		);
 	}
@@ -286,12 +278,11 @@ function MapComponent() {
 		);
 	}
 
+	const hasLocation =
+		geolocation.latitude != null && geolocation.longitude != null;
 	if (geolocation.longitude == null || geolocation.latitude == null) {
-		return (
-			<div className="h-screen w-screen">
-				<p>Could not find your location</p>
-			</div>
-		);
+		geolocation.longitude = campaign.data.longitude;
+		geolocation.latitude = campaign.data.latitude;
 	}
 
 	return (
@@ -316,21 +307,23 @@ function MapComponent() {
 					onMouseUp={onMouseUp}
 					onMouseEnter={onMouseEnter}
 					onMouseLeave={onMouseLeave}
-					onTouchStart={onTouchStart}
-					onTouchMove={onTouchMove}
-					onTouchEnd={onTouchEnd}
+					// onTouchStart={onTouchStart}
+					// onTouchMove={onTouchMove}
+					// onTouchEnd={onTouchEnd}
 				>
 					<AccuracyCricle geolocation={geolocation} />
-					<Marker
-						longitude={geolocation.longitude}
-						latitude={geolocation.latitude}
-						anchor="bottom"
-					>
-						<div className="size-5 rounded-full bg-blue-600 border-2 border-white shadow-md"></div>
-					</Marker>
+					{hasLocation && (
+						<Marker
+							longitude={geolocation.longitude}
+							latitude={geolocation.latitude}
+							anchor="bottom"
+						>
+							<div className="size-5 rounded-full bg-blue-600 border-2 border-white shadow-md"></div>
+						</Marker>
+					)}
 					<PinsLayer draggingPin={draggingPin} />
 					<MapControls geolocation={geolocation} />
-					<PinControl geolocation={geolocation} />
+					<PinControl canSetPins={hasLocation} geolocation={geolocation} />
 					<MenuSheet campaign={campaign.data} />
 				</MapLibre>
 			</div>
