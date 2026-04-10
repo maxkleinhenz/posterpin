@@ -1,7 +1,6 @@
 import { SlidersHorizontal } from "lucide-react";
 import { useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Item, ItemContent, ItemGroup, ItemTitle } from "@/components/ui/item";
@@ -48,7 +47,7 @@ export default function PinSettingsPopup() {
 		})),
 	);
 
-	const showBadge = useMemo(() => {
+	const changedSettings = useMemo(() => {
 		return (
 			defaultFilter.hung !== pinFilter.hung ||
 			defaultFilter.planned !== pinFilter.planned ||
@@ -62,15 +61,13 @@ export default function PinSettingsPopup() {
 			<Tooltip>
 				<TooltipTrigger asChild>
 					<PopoverTrigger asChild>
-						<Button className="relative p-5" size="icon-lg" variant="ghost">
+						<Button
+							className="relative p-5"
+							size="icon-lg"
+							variant={changedSettings ? "default" : "ghost"}
+						>
 							<SlidersHorizontal className="size-5" />
 							<span className="sr-only">Einstellungen</span>
-							{showBadge && (
-								<Badge
-									variant="destructive"
-									className="absolute -top-2.5 -right-2.5 h-5 min-w-5 px-1 tabular-nums"
-								/>
-							)}
 						</Button>
 					</PopoverTrigger>
 				</TooltipTrigger>
