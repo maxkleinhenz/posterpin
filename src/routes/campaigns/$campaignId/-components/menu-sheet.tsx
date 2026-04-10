@@ -77,7 +77,7 @@ export default function MenuSheet({ campaign }: { campaign: Campaign }) {
 	}
 
 	return (
-		<div className="absolute bottom-10 left-2 grid gap-2">
+		<div className="grid gap-2">
 			<Sheet
 				modal={false}
 				open={open}
@@ -91,9 +91,9 @@ export default function MenuSheet({ campaign }: { campaign: Campaign }) {
 						{/* Menu */}
 						<SheetTrigger asChild>
 							<Button
-								className="p-6"
+								className="p-5"
+								variant="ghost"
 								size="icon-lg"
-								variant="outline"
 								onClick={() => {
 									setMode({ mode: "menu" });
 								}}

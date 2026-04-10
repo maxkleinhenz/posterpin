@@ -334,24 +334,29 @@ function MapComponent() {
 					<MenuSheet campaign={campaign.data} />
 				</MapLibre>
 			</div>
-			<div className="absolute top-2 left-2 flex items-center gap-2 p-1 pr-4 bg-background rounded-md shadow-md">
-				<Tooltip>
-					<TooltipTrigger asChild>
-						<Button
-							className="p-5"
-							variant="ghost"
-							size="icon-lg"
-							onClick={() => navigate({ to: "/" })}
-						>
-							<ArrowLeft />
-						</Button>
-					</TooltipTrigger>
-					<TooltipContent className="px-2 py-1 text-xs" side="bottom">
-						Zurück
-					</TooltipContent>
-				</Tooltip>
+			<div className="absolute top-2 left-2 flex gap-2">
+				<div className="flex items-center gap-2 p-1 bg-background rounded-md shadow-md">
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<Button
+								className="p-5"
+								variant="ghost"
+								size="icon-lg"
+								onClick={() => navigate({ to: "/" })}
+							>
+								<ArrowLeft />
+							</Button>
+						</TooltipTrigger>
+						<TooltipContent className="px-2 py-1 text-xs" side="bottom">
+							Zurück
+						</TooltipContent>
+					</Tooltip>
+				</div>
+				<div className="flex items-center gap-2 p-1 bg-background rounded-md shadow-md">
+					<MenuSheet campaign={campaign.data} />
 
-				<h1 className="text font-semibold">{campaign.data?.name}</h1>
+					<h1 className="text font-semibold">{campaign.data?.name}</h1>
+				</div>
 			</div>
 			<PinDetailsSheet />
 		</div>
