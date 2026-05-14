@@ -9,6 +9,7 @@ import {
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { DefaultCatchBoundary } from "@/components/DefaultCatchBoundary";
 import { NotFound } from "@/components/NotFound";
+import { Pending } from "@/components/Pending";
 import appCss from "../styles.css?url";
 
 export const Route = createRootRouteWithContext<{
@@ -43,6 +44,7 @@ export const Route = createRootRouteWithContext<{
 		);
 	},
 	notFoundComponent: () => <NotFound />,
+	pendingComponent: Pending,
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {

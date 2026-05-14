@@ -6,6 +6,7 @@ import {
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import type { Id } from "convex/_generated/dataModel";
+import type { Campaign } from "convex/schema";
 import { ArrowLeft } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import MapLibre, {
@@ -74,20 +75,28 @@ export const Route = createFileRoute("/campaigns/$campaignId/")({
 });
 
 function RouteComponent() {
+	const campaignId = Route.useParams().campaignId as Id<"campaigns">;
+	const campaign = useSuspenseQuery(campaignsQueries.getById(campaignId));
+
+	if (campaign.data == null) {
+		return (
+			<div className="h-screen w-screen">
+				<p>Loading</p>
+			</div>
+		);
+	}
+
 	return (
 		<ClientOnly>
-			<MapComponent />
+			<MapComponent campaign={campaign.data} />
 		</ClientOnly>
 	);
 }
 
 type DraggingPin = { id: string; latitude: number; longitude: number };
 
-function MapComponent() {
+function MapComponent({ campaign }: { campaign: Campaign }) {
 	const navigate = useNavigate();
-	const campaignId = Route.useParams().campaignId as Id<"campaigns">;
-
-	const campaign = useSuspenseQuery(campaignsQueries.getById(campaignId));
 
 	const [cursor, setCursor] = useState<string>("grab");
 	const [draggingPin, setDraggingPin] = useState<DraggingPin | null>(null);
@@ -167,7 +176,7 @@ function MapComponent() {
 			addPlannedPinMutation.mutate({
 				latitude: e.lngLat.lat,
 				longitude: e.lngLat.lng,
-				campaignId: campaignId,
+				campaignId: campaign._id,
 			});
 		}
 	}
@@ -263,27 +272,27 @@ function MapComponent() {
 		setCursor(mode.mode === "planning" ? "crosshair" : "grab");
 	}
 
-	if (campaign.isLoading || campaign.data == null) {
-		return (
-			<div className="h-screen w-screen">
-				<p>Loading</p>
-			</div>
-		);
-	}
+	// if (campaign.isLoading || campaign.data == null) {
+	// 	return (
+	// 		<div className="h-screen w-screen">
+	// 			<p>Loading</p>
+	// 		</div>
+	// 	);
+	// }
 
-	if (geolocation.error) {
-		return (
-			<div className="h-screen w-screen">
-				<p>Enable permissions to access your location data</p>
-			</div>
-		);
-	}
+	// if (geolocation.error?.code === GeolocationPositionError.) {
+	// 	return (
+	// 		<div className="h-screen w-screen">
+	// 			<p>Enable permissions to access your location data</p>
+	// 		</div>
+	// 	);
+	// }
 
 	const hasLocation =
 		geolocation.latitude != null && geolocation.longitude != null;
 	if (geolocation.longitude == null || geolocation.latitude == null) {
-		geolocation.longitude = campaign.data.longitude;
-		geolocation.latitude = campaign.data.latitude;
+		geolocation.longitude = campaign.longitude;
+		geolocation.latitude = campaign.latitude;
 	}
 
 	return (
@@ -347,9 +356,9 @@ function MapComponent() {
 						</Tooltip>
 					</div>
 					<div className="flex items-center gap-2 py-1 px-1 pe-4 bg-background rounded-md shadow-md">
-						<MenuSheet campaign={campaign.data} />
+						<MenuSheet campaign={campaign} />
 
-						<h1 className="text font-semibold">{campaign.data?.name}</h1>
+						<h1 className="text font-semibold">{campaign.name}</h1>
 					</div>
 				</div>
 				<PinDetailsSheet />
