@@ -1,4 +1,10 @@
-import { LocateFixed, Navigation2, X, ZoomIn, ZoomOut } from "lucide-react";
+import {
+	LocateFixed,
+	LocateOff,
+	Navigation2,
+	ZoomIn,
+	ZoomOut,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
 	Tooltip,
@@ -78,9 +84,7 @@ export default function MapControls({
 		}
 	}, [map, latitude, longitude]);
 
-	function handleLocationButtonClick() {
-		console.log("geo error:", geolocation.error);
-
+	function handleLocationError() {
 		if (geolocation.error?.code === 1) {
 			toast.error("Standortzugriff verweigert.", {
 				description:
@@ -88,7 +92,7 @@ export default function MapControls({
 				dismissible: true,
 				closeButton: true,
 			});
-			return;
+			return true;
 		} else if (geolocation.error?.code === 2) {
 			toast.error("Standort nicht gefunden.", {
 				description:
@@ -96,7 +100,7 @@ export default function MapControls({
 				dismissible: true,
 				closeButton: true,
 			});
-			return;
+			return true;
 		} else if (geolocation.error?.code === 3) {
 			toast.error("Zeitüberschreitung bei Standortbestimmung.", {
 				description:
@@ -104,6 +108,14 @@ export default function MapControls({
 				dismissible: true,
 				closeButton: true,
 			});
+			return true;
+		}
+
+		return false;
+	}
+
+	function handleLocationButtonClick() {
+		if (handleLocationError()) {
 			return;
 		}
 
@@ -193,7 +205,24 @@ export default function MapControls({
 						Hineinzoom
 					</TooltipContent>
 				</Tooltip>
-				{longitude != null && latitude != null && (
+				{geolocation.error ? (
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<Button
+								className="p-5"
+								variant="ghost"
+								size="icon-lg"
+								onClick={handleLocationError}
+							>
+								<LocateOff className="size-5" />
+								<span className="sr-only">Standort nicht verfügbar</span>
+							</Button>
+						</TooltipTrigger>
+						<TooltipContent className="px-2 py-1 text-xs" side="left">
+							Standort nicht verfügbar
+						</TooltipContent>
+					</Tooltip>
+				) : (
 					<Tooltip>
 						<TooltipTrigger asChild>
 							<Button
