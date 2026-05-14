@@ -1,4 +1,4 @@
-import { LocateFixed, Navigation2, ZoomIn, ZoomOut } from "lucide-react";
+import { LocateFixed, Navigation2, X, ZoomIn, ZoomOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
 	Tooltip,
@@ -9,6 +9,7 @@ import type { GeolocationState } from "@/lib/use-geolocation";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useEffect, useRef, useState } from "react";
 import { useMap } from "react-map-gl/maplibre";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import PinSettingsPopup from "./pin-settings";
 
@@ -78,6 +79,34 @@ export default function MapControls({
 	}, [map, latitude, longitude]);
 
 	function handleLocationButtonClick() {
+		console.log("geo error:", geolocation.error);
+
+		if (geolocation.error?.code === 1) {
+			toast.error("Standortzugriff verweigert.", {
+				description:
+					"Bitte erlaube den Zugriff auf deinen Standort, um diese Funktion zu nutzen.",
+				dismissible: true,
+				closeButton: true,
+			});
+			return;
+		} else if (geolocation.error?.code === 2) {
+			toast.error("Standort nicht gefunden.", {
+				description:
+					"Dein Gerät konnte deinen Standort nicht bestimmen. Bitte versuche es später erneut.",
+				dismissible: true,
+				closeButton: true,
+			});
+			return;
+		} else if (geolocation.error?.code === 3) {
+			toast.error("Zeitüberschreitung bei Standortbestimmung.", {
+				description:
+					"Die Standortbestimmung hat zu lange gedauert. Bitte versuche es erneut.",
+				dismissible: true,
+				closeButton: true,
+			});
+			return;
+		}
+
 		if (latitude == null || longitude == null) return;
 
 		if (followMode) {

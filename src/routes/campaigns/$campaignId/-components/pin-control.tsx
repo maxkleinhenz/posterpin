@@ -1,5 +1,6 @@
 import { useParams } from "@tanstack/react-router";
 import type { Id } from "convex/_generated/dataModel";
+import { LocateOff } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { Button } from "@/components/ui/button";
 import { AddPin } from "@/icons";
@@ -45,7 +46,7 @@ export default function PinControl({
 
 	return (
 		<div className="flex gap-2 absolute left-1/2 -translate-x-1/2 bottom-10 justify-center">
-			{canSetPins && longitude != null && latitude != null && (
+			{canSetPins && longitude != null && latitude != null ? (
 				<Button
 					className="shadow-md p-6"
 					size="lg"
@@ -59,6 +60,10 @@ export default function PinControl({
 				>
 					<AddPin className="size-5" /> Plakat hängen
 				</Button>
+			) : (
+				<div className="flex gap-2 items-center bg-white text-sm p-2 rounded-full">
+					<LocateOff className="size-5" /> Standort nicht verfügbar
+				</div>
 			)}
 		</div>
 	);

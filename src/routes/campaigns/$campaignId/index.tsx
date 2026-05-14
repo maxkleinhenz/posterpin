@@ -272,22 +272,6 @@ function MapComponent({ campaign }: { campaign: Campaign }) {
 		setCursor(mode.mode === "planning" ? "crosshair" : "grab");
 	}
 
-	// if (campaign.isLoading || campaign.data == null) {
-	// 	return (
-	// 		<div className="h-screen w-screen">
-	// 			<p>Loading</p>
-	// 		</div>
-	// 	);
-	// }
-
-	// if (geolocation.error?.code === GeolocationPositionError.) {
-	// 	return (
-	// 		<div className="h-screen w-screen">
-	// 			<p>Enable permissions to access your location data</p>
-	// 		</div>
-	// 	);
-	// }
-
 	const hasLocation =
 		geolocation.latitude != null && geolocation.longitude != null;
 	if (geolocation.longitude == null || geolocation.latitude == null) {
@@ -358,7 +342,7 @@ function MapComponent({ campaign }: { campaign: Campaign }) {
 					<div className="flex items-center gap-2 py-1 px-1 pe-4 bg-background rounded-md shadow-md">
 						<MenuSheet campaign={campaign} />
 
-						<h1 className="text font-semibold">{campaign.name}</h1>
+						<h1 className="font-semibold">{campaign.name}</h1>
 					</div>
 				</div>
 				<PinDetailsSheet />
