@@ -1,15 +1,19 @@
-import { SlidersHorizontal } from "lucide-react";
-import { useMemo } from "react";
+import { useMediaQuery } from "@uidotdev/usehooks";
+import { MapIcon, SlidersHorizontal } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Item, ItemContent, ItemGroup, ItemTitle } from "@/components/ui/item";
 import { Label } from "@/components/ui/label";
 import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
+	Sheet,
+	SheetContent,
+	SheetDescription,
+	SheetHeader,
+	SheetTitle,
+	SheetTrigger,
+} from "@/components/ui/sheet";
 import {
 	Tooltip,
 	TooltipContent,
@@ -33,15 +37,21 @@ const filterItems: {
 ];
 
 export default function PinSettingsPopup() {
-	const { pinFilter, setPinFilter } = useAppStore(
+	const isSmallDevice = useMediaQuery("only screen and (max-width : 768px)");
+
+	const [open, setOpen] = useState(false);
+
+	const {
+		pinFilter,
+		setPinFilter,
+		setMode,
+		isAuracyVisible,
+		setIsAuracyVisible,
+	} = useAppStore(
 		useShallow((state) => ({
 			pinFilter: state.pinFilter,
 			setPinFilter: state.setPinFilter,
-		})),
-	);
-
-	const { isAuracyVisible, setIsAuracyVisible } = useAppStore(
-		useShallow((state) => ({
+			setMode: state.setMode,
 			isAuracyVisible: state.isAuracyVisible,
 			setIsAuracyVisible: state.setIsAuracyVisible,
 		})),
@@ -57,10 +67,16 @@ export default function PinSettingsPopup() {
 	}, [pinFilter, isAuracyVisible]);
 
 	return (
-		<Popover>
+		<Sheet
+			modal={true}
+			open={open}
+			onOpenChange={(o) => {
+				setOpen(o);
+			}}
+		>
 			<Tooltip>
 				<TooltipTrigger asChild>
-					<PopoverTrigger asChild>
+					<SheetTrigger asChild>
 						<Button
 							className="relative p-5"
 							size="icon-lg"
@@ -69,20 +85,37 @@ export default function PinSettingsPopup() {
 							<SlidersHorizontal className="size-5" />
 							<span className="sr-only">Einstellungen</span>
 						</Button>
-					</PopoverTrigger>
+					</SheetTrigger>
 				</TooltipTrigger>
 				<TooltipContent className="px-2 py-1 text-xs" side="left">
 					Einstellungen
 				</TooltipContent>
 			</Tooltip>
 
-			<PopoverContent
-				side="top"
-				align="end"
-				sideOffset={12}
-				className="w-80 p-3"
+			<SheetContent
+				className="gap-0 rounded-t-md w-full md:w-96 max-sm:max-h-4/5 md:h-dvh"
+				side={isSmallDevice ? "bottom" : "right"}
 			>
-				<ItemGroup className="rounded-md overflow-hidden">
+				<SheetHeader>
+					<SheetTitle>Einstellungen</SheetTitle>
+					<SheetDescription>
+						Anpassungen von Karteneinstellungen
+					</SheetDescription>
+				</SheetHeader>
+				<ItemGroup className="rounded-md overflow-auto">
+					<Item>
+						<ItemContent className="flex gap-2 items-start">
+							<Button
+								variant="outline"
+								onClick={() => {
+									setMode({ mode: "planning" });
+									setOpen(false);
+								}}
+							>
+								<MapIcon className="size-5" /> Planen
+							</Button>
+						</ItemContent>
+					</Item>
 					<Item className="hover:bg-muted/50">
 						<ItemContent className="grid gap-2">
 							<div>
@@ -97,7 +130,10 @@ export default function PinSettingsPopup() {
 										<Checkbox
 											checked={pinFilter[key]}
 											onCheckedChange={(checked) =>
-												setPinFilter({ ...pinFilter, [key]: checked === true })
+												setPinFilter({
+													...pinFilter,
+													[key]: checked === true,
+												})
 											}
 										/>
 										<span className={`size-3 rounded-full ${color}`} />
@@ -125,8 +161,8 @@ export default function PinSettingsPopup() {
 							</div>
 						</ItemContent>
 					</Item>
-					<Item className="">
-						<ItemContent className="grid gap-2">
+					<Item>
+						<ItemContent className="flex gap-2 items-start">
 							<Button
 								variant="outline"
 								onClick={() => {
@@ -139,7 +175,7 @@ export default function PinSettingsPopup() {
 						</ItemContent>
 					</Item>
 				</ItemGroup>
-			</PopoverContent>
-		</Popover>
+			</SheetContent>
+		</Sheet>
 	);
 }

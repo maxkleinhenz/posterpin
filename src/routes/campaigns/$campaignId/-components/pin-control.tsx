@@ -1,6 +1,5 @@
 import { useParams } from "@tanstack/react-router";
 import type { Id } from "convex/_generated/dataModel";
-import { MapIcon } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { Button } from "@/components/ui/button";
 import { AddPin } from "@/icons";
@@ -28,8 +27,8 @@ export default function PinControl({
 
 	if (isPlanning) {
 		return (
-			<div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
-				<div className="bg-blue-600 text-white text-sm px-4 py-2 rounded-full shadow-md">
+			<div className="absolute bottom-10 inset-x-0 flex px-8 flex-col items-center gap-2">
+				<div className="bg-blue-600 text-white text-pretty text-sm px-6 py-2 rounded-full shadow-md">
 					Planungsmodus — Tippe auf die Karte um ein Plakat zu planen
 				</div>
 				<Button
@@ -61,14 +60,6 @@ export default function PinControl({
 					<AddPin className="size-5" /> Plakat hängen
 				</Button>
 			)}
-			<Button
-				className="shadow-md p-6"
-				size="lg"
-				variant="outline"
-				onClick={() => setMode({ mode: "planning" })}
-			>
-				<MapIcon className="size-5" /> Planen
-			</Button>
 		</div>
 	);
 }
