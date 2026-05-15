@@ -8,6 +8,7 @@ const schema = defineSchema({
 		longitude: v.number(),
 		latitude: v.number(),
 		campaignId: v.id("campaigns"),
+		color: v.string(),
 		hangAt: v.optional(v.nullable(v.number())),
 		tookDownAt: v.optional(v.nullable(v.number())),
 	})
@@ -40,6 +41,7 @@ export const insertPinSchema = v.object({
 	latitude: pin.fields.latitude,
 	longitude: pin.fields.longitude,
 	campaignId: pin.fields.campaignId,
+	color: pin.fields.color,
 });
 export type InsertPin = Infer<typeof insertPinSchema>;
 

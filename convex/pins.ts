@@ -16,6 +16,7 @@ export const seed = internalMutation(async (ctx) => {
 		longitude: 13.726584932188327,
 		latitude: 51.029938550838814,
 		campaignId: "jh7fe4q149a63we6t1sd749dqd81wnmz" as Id<"campaigns">,
+		color: "yellow",
 		hangAt: Date.now(),
 		tookDownAt: null,
 	});
@@ -46,6 +47,7 @@ export const add = mutation({
 			latitude: args.latitude,
 			longitude: args.longitude,
 			campaignId: args.campaignId,
+			color: args.color,
 			hangAt: Date.now(),
 			tookDownAt: null,
 		});
@@ -59,6 +61,7 @@ export const addPlanned = mutation({
 			latitude: args.latitude,
 			longitude: args.longitude,
 			campaignId: args.campaignId,
+			color: args.color,
 			hangAt: null,
 			tookDownAt: null,
 		});

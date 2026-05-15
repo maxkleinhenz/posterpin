@@ -102,10 +102,11 @@ function MapComponent({ campaign }: { campaign: Campaign }) {
 	const [draggingPin, setDraggingPin] = useState<DraggingPin | null>(null);
 	const wasDraggedRef = useRef(false);
 
-	const { mode, setMode } = useAppStore(
+	const { mode, setMode, pinColor } = useAppStore(
 		useShallow((state) => ({
 			mode: state.mode,
 			setMode: state.setMode,
+			pinColor: state.pinColor,
 		})),
 	);
 	const addPlannedPinMutation = useAddPlannedPinMutation();
@@ -177,6 +178,7 @@ function MapComponent({ campaign }: { campaign: Campaign }) {
 				latitude: e.lngLat.lat,
 				longitude: e.lngLat.lng,
 				campaignId: campaign._id,
+				color: pinColor,
 			});
 		}
 	}

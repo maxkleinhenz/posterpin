@@ -19,7 +19,7 @@ export default function PinControl({
 	geolocation: GeolocationState;
 }) {
 	const { campaignId } = useParams({ from: "/campaigns/$campaignId/" });
-	const mutation = useAddPinMutation();
+	const addPinMutation = useAddPinMutation();
 	const { mode, setMode, pinColor } = useAppStore(
 		useShallow((state) => ({
 			mode: state.mode,
@@ -58,10 +58,11 @@ export default function PinControl({
 						className={`shadow-md p-6 ${colors[pinColor].bg} ${colors[pinColor].text}`}
 						size="lg"
 						onClick={() => {
-							mutation.mutate({
+							addPinMutation.mutate({
 								latitude: latitude,
 								longitude: longitude,
 								campaignId: campaignId as Id<"campaigns">,
+								color: pinColor,
 							});
 						}}
 					>

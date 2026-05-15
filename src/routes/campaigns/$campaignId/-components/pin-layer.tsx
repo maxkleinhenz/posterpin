@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
 import type { Id } from "convex/_generated/dataModel";
+import type { ExpressionSpecification } from "maplibre-gl";
+import { colors, type PinColor } from "@/colors";
 import { pinQueries } from "@/queries/pins";
 import { useAppStore } from "@/store/app-store";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -17,13 +19,49 @@ export const hungSourceId = "pins-source-hung";
 export const tookDownSourceId = "pins-source-took-down";
 export const plannedSourceId = "pins-source-planned";
 
+const pinColors = Object.keys(colors) as PinColor[];
+
+function getPinColorKey(color: string | undefined): PinColor {
+	if (color && color in colors) {
+		return color as PinColor;
+	}
+
+	return "yellow";
+}
+
+function createDominantColorExpression(
+	getValue: (color: PinColor) => string,
+): ExpressionSpecification {
+	const expression: unknown[] = ["case"];
+
+	for (const color of pinColors) {
+		expression.push(
+			[
+				"all",
+				...pinColors
+					.filter((candidate) => candidate !== color)
+					.map((candidate) => [
+						">=",
+						["get", `colorCount_${color}`],
+						["get", `colorCount_${candidate}`],
+					]),
+			],
+			getValue(color),
+		);
+	}
+
+	expression.push(colors.yellow.rgb);
+
+	return expression as ExpressionSpecification;
+}
+
 export const hungClusterLayer = {
 	id: "pins-cluster-hung",
 	type: "circle",
 	filter: ["has", "point_count"],
 	paint: {
 		"circle-radius": ["step", ["get", "point_count"], 25, 100, 35, 750, 45],
-		"circle-color": "#fbbf24",
+		"circle-color": createDominantColorExpression((color) => colors[color].rgb),
 		"circle-stroke-width": 2,
 		"circle-stroke-color": "#ffffff",
 	},
@@ -38,6 +76,13 @@ const hungClusterCountLayer = {
 		"text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
 		"text-size": 16,
 	},
+	paint: {
+		"text-color": createDominantColorExpression((color) =>
+			colors[getPinColorKey(color)].text === "text-black"
+				? "#000000"
+				: "#ffffff",
+		),
+	},
 } as const satisfies LayerProps;
 
 export const pinsUnclusteredPointLayer = {
@@ -46,7 +91,7 @@ export const pinsUnclusteredPointLayer = {
 	filter: ["!", ["has", "point_count"]],
 	paint: {
 		"circle-radius": 18,
-		"circle-color": "#fbbf24",
+		"circle-color": ["coalesce", ["get", "colorRgb"], colors.yellow.rgb],
 		"circle-stroke-width": 2,
 		"circle-stroke-color": "#ffffff",
 	},
@@ -131,6 +176,7 @@ function toFeature(
 		_id: string;
 		longitude: number;
 		latitude: number;
+		color?: string;
 		hangAt?: number | null;
 		tookDownAt?: number | null;
 	},
@@ -147,6 +193,8 @@ function toFeature(
 		},
 		properties: {
 			id: pin._id,
+			colorKey: getPinColorKey(pin.color),
+			colorRgb: colors[getPinColorKey(pin.color)].rgb,
 			hangAt: pin.hangAt ?? null,
 			tookDownAt: pin.tookDownAt ?? null,
 		},
@@ -204,6 +252,10 @@ export default function PinsLayer({
 					cluster
 					clusterMaxZoom={16}
 					clusterRadius={30}
+					clusterProperties={pinColors.map((color) => [
+						`colorCount_${color}`,
+						["+", ["case", ["==", ["get", "colorKey"], color], 1, 0]],
+					])}
 					{...hungGeoJSON}
 				>
 					<Layer {...hungClusterLayer} />
