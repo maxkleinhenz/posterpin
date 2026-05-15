@@ -6,14 +6,77 @@ import { colors, type PinColor } from "@/colors";
 import { pinQueries } from "@/queries/pins";
 import { useAppStore } from "@/store/app-store";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import {
 	type GeoJSONSourceSpecification,
 	Layer,
 	type LayerProps,
 	Source,
+	useMap,
 } from "react-map-gl/maplibre";
 import { useShallow } from "zustand/react/shallow";
+
+function createPinPatternImage(
+	color: string,
+	pattern: "stripes" | "crosshatch",
+): { width: number; height: number; data: Uint8Array } {
+	const size = 40;
+	const canvas = document.createElement("canvas");
+	canvas.width = size;
+	canvas.height = size;
+	const ctx = canvas.getContext("2d");
+	if (!ctx) return { width: size, height: size, data: new Uint8Array(size * size * 4) };
+	const cx = size / 2;
+	const cy = size / 2;
+	const r = size / 2 - 2;
+
+	ctx.beginPath();
+	ctx.arc(cx, cy, r, 0, Math.PI * 2);
+	ctx.fillStyle = color;
+	ctx.globalAlpha = pattern === "crosshatch" ? 0.5 : 0.65;
+	ctx.fill();
+	ctx.globalAlpha = 1;
+
+	ctx.save();
+	ctx.beginPath();
+	ctx.arc(cx, cy, r, 0, Math.PI * 2);
+	ctx.clip();
+
+	if (pattern === "stripes") {
+		ctx.strokeStyle = "rgba(255,255,255,0.65)";
+		ctx.lineWidth = 3;
+		for (let i = -size; i < size * 2; i += 14) {
+			ctx.beginPath();
+			ctx.moveTo(i, 0);
+			ctx.lineTo(i + size, size);
+			ctx.stroke();
+		}
+	} else {
+		ctx.strokeStyle = "rgba(0,0,0,0.3)";
+		ctx.lineWidth = 1.5;
+		for (let i = -size; i < size * 2; i += 12) {
+			ctx.beginPath();
+			ctx.moveTo(i, 0);
+			ctx.lineTo(i + size, size);
+			ctx.stroke();
+			ctx.beginPath();
+			ctx.moveTo(size - i, 0);
+			ctx.lineTo(-i, size);
+			ctx.stroke();
+		}
+	}
+
+	ctx.restore();
+
+	ctx.beginPath();
+	ctx.arc(cx, cy, r, 0, Math.PI * 2);
+	ctx.strokeStyle = pattern === "crosshatch" ? "#888888" : "#ffffff";
+	ctx.lineWidth = 3;
+	ctx.stroke();
+
+	const imageData = ctx.getImageData(0, 0, size, size);
+	return { width: size, height: size, data: new Uint8Array(imageData.data.buffer) };
+}
 
 export const hungSourceId = "pins-source-hung";
 export const tookDownSourceId = "pins-source-took-down";
@@ -56,7 +119,7 @@ function createDominantColorExpression(
 	return expression as ExpressionSpecification;
 }
 
-const hungClusterProperties = Object.fromEntries(
+const clusterColorProperties = Object.fromEntries(
 	pinColors.map((color) => [
 		`colorCount_${color}`,
 		["+", ["case", ["==", ["get", "colorKey"], color], 1, 0]],
@@ -112,13 +175,17 @@ export const pinsUnclusteredPointLayer = {
 
 export const tookDownClusterLayer = {
 	id: "pins-cluster-took-down",
-	type: "circle",
+	type: "symbol",
 	filter: ["has", "point_count"],
-	paint: {
-		"circle-radius": ["step", ["get", "point_count"], 25, 100, 35, 750, 45],
-		"circle-color": "#9ca3af",
-		"circle-stroke-width": 2,
-		"circle-stroke-color": "#ffffff",
+	layout: {
+		"icon-image": [
+			"concat",
+			"pin-tookdown-",
+			createDominantColorExpression((color) => color, "yellow"),
+		],
+		"icon-size": ["step", ["get", "point_count"], 1.25, 100, 1.75, 750, 2.25],
+		"icon-allow-overlap": true,
+		"icon-ignore-placement": true,
 	},
 } as const satisfies LayerProps;
 
@@ -131,30 +198,42 @@ const tookDownClusterCountLayer = {
 		"text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
 		"text-size": 16,
 	},
+	paint: {
+		"text-color": createDominantColorExpression(
+			(color) =>
+				colors[getPinColorKey(color)].text === "text-black"
+					? "#000000"
+					: "#ffffff",
+			"#000000",
+		),
+	},
 } as const satisfies LayerProps;
 
 export const pinsTookDownLayer = {
 	id: "pins-layer-took-down",
-	type: "circle",
+	type: "symbol",
 	filter: ["!", ["has", "point_count"]],
-	paint: {
-		"circle-radius": 18,
-		"circle-color": "#9ca3af",
-		"circle-stroke-width": 2,
-		"circle-stroke-color": "#ffffff",
-		"circle-opacity": 0.6,
+	layout: {
+		"icon-image": ["concat", "pin-tookdown-", ["get", "colorKey"]],
+		"icon-size": 1,
+		"icon-allow-overlap": true,
+		"icon-ignore-placement": true,
 	},
 } as const satisfies LayerProps;
 
 export const plannedClusterLayer = {
 	id: "pins-cluster-planned",
-	type: "circle",
+	type: "symbol",
 	filter: ["has", "point_count"],
-	paint: {
-		"circle-radius": ["step", ["get", "point_count"], 25, 100, 35, 750, 45],
-		"circle-color": "#3b82f6",
-		"circle-stroke-width": 2,
-		"circle-stroke-color": "#ffffff",
+	layout: {
+		"icon-image": [
+			"concat",
+			"pin-planned-",
+			createDominantColorExpression((color) => color, "yellow"),
+		],
+		"icon-size": ["step", ["get", "point_count"], 1.25, 100, 1.75, 750, 2.25],
+		"icon-allow-overlap": true,
+		"icon-ignore-placement": true,
 	},
 } as const satisfies LayerProps;
 
@@ -167,18 +246,26 @@ const plannedClusterCountLayer = {
 		"text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
 		"text-size": 16,
 	},
+	paint: {
+		"text-color": createDominantColorExpression(
+			(color) =>
+				colors[getPinColorKey(color)].text === "text-black"
+					? "#000000"
+					: "#ffffff",
+			"#000000",
+		),
+	},
 } as const satisfies LayerProps;
 
 export const pinsPlannedLayer = {
 	id: "pins-layer-planned",
-	type: "circle",
+	type: "symbol",
 	filter: ["!", ["has", "point_count"]],
-	paint: {
-		"circle-radius": 18,
-		"circle-color": "#3b82f6",
-		"circle-stroke-width": 2,
-		"circle-stroke-color": "#ffffff",
-		"circle-opacity": 0.85,
+	layout: {
+		"icon-image": ["concat", "pin-planned-", ["get", "colorKey"]],
+		"icon-size": 1,
+		"icon-allow-overlap": true,
+		"icon-ignore-placement": true,
 	},
 } as const satisfies LayerProps;
 
@@ -227,6 +314,24 @@ export default function PinsLayer({
 	draggingPin?: DraggingPin | null;
 }) {
 	const { campaignId } = useParams({ from: "/campaigns/$campaignId/" });
+	const maps = useMap();
+
+	useEffect(() => {
+		const map = Object.values(maps)[0];
+		if (!map) return;
+		for (const color of pinColors) {
+			const rgb = colors[color].rgb;
+			const plannedId = `pin-planned-${color}`;
+			if (!map.hasImage(plannedId)) {
+				map.addImage(plannedId, createPinPatternImage(rgb, "stripes"));
+			}
+			const tookDownId = `pin-tookdown-${color}`;
+			if (!map.hasImage(tookDownId)) {
+				map.addImage(tookDownId, createPinPatternImage(rgb, "crosshatch"));
+			}
+		}
+	}, [maps]);
+
 	const pins = useQuery(pinQueries.list(campaignId as Id<"campaigns">));
 
 	const { pinFilter } = useAppStore(
@@ -265,6 +370,7 @@ export default function PinsLayer({
 					cluster
 					clusterMaxZoom={16}
 					clusterRadius={30}
+					clusterProperties={clusterColorProperties}
 					{...tookDownGeoJSON}
 				>
 					<Layer {...tookDownClusterLayer} />
@@ -278,6 +384,7 @@ export default function PinsLayer({
 					cluster
 					clusterMaxZoom={16}
 					clusterRadius={30}
+					clusterProperties={clusterColorProperties}
 					{...plannedGeoJSON}
 				>
 					<Layer {...plannedClusterLayer} />
@@ -291,7 +398,7 @@ export default function PinsLayer({
 					cluster
 					clusterMaxZoom={16}
 					clusterRadius={30}
-					clusterProperties={hungClusterProperties}
+					clusterProperties={clusterColorProperties}
 					{...hungGeoJSON}
 				>
 					<Layer {...hungClusterLayer} />
