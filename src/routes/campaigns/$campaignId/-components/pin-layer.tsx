@@ -25,7 +25,8 @@ function createPinPatternImage(
 	canvas.width = size;
 	canvas.height = size;
 	const ctx = canvas.getContext("2d");
-	if (!ctx) return { width: size, height: size, data: new Uint8Array(size * size * 4) };
+	if (!ctx)
+		return { width: size, height: size, data: new Uint8Array(size * size * 4) };
 	const cx = size / 2;
 	const cy = size / 2;
 	const r = size / 2 - 2;
@@ -75,7 +76,11 @@ function createPinPatternImage(
 	ctx.stroke();
 
 	const imageData = ctx.getImageData(0, 0, size, size);
-	return { width: size, height: size, data: new Uint8Array(imageData.data.buffer) };
+	return {
+		width: size,
+		height: size,
+		data: new Uint8Array(imageData.data.buffer),
+	};
 }
 
 export const hungSourceId = "pins-source-hung";
@@ -342,15 +347,27 @@ export default function PinsLayer({
 		if (!pins.data) return {};
 
 		const hung = pins.data
-			.filter((p) => p.hangAt != null && p.tookDownAt == null)
+			.filter(
+				(p) =>
+					p.hangAt != null &&
+					p.tookDownAt == null &&
+					pinFilter.colors[p.color as PinColor],
+			)
 			.map((p) => toFeature(p));
 
 		const tookDown = pins.data
-			.filter((p) => p.tookDownAt != null)
+			.filter(
+				(p) => p.tookDownAt != null && pinFilter.colors[p.color as PinColor],
+			)
 			.map((p) => toFeature(p));
 
 		const planned = pins.data
-			.filter((p) => p.hangAt == null && p.tookDownAt == null)
+			.filter(
+				(p) =>
+					p.hangAt == null &&
+					p.tookDownAt == null &&
+					pinFilter.colors[p.color as PinColor],
+			)
 			.map((p) => toFeature(p, draggingPin));
 
 		return {
@@ -358,7 +375,7 @@ export default function PinsLayer({
 			tookDownGeoJSON: toGeoJSON(tookDown),
 			plannedGeoJSON: toGeoJSON(planned),
 		};
-	}, [pins.data, draggingPin]);
+	}, [pins.data, draggingPin, pinFilter.colors]);
 
 	if (!hungGeoJSON || !tookDownGeoJSON || !plannedGeoJSON) return null;
 

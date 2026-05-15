@@ -42,7 +42,7 @@ export default function PinColorPopover({
 						Wähle eine Farbe für dein Plakat aus.
 					</PopoverDescription>
 				</PopoverHeader>
-				<div className="grid grid-cols-5 gap-2 py-2">
+				<div className="flex flex-wrap gap-2 py-2">
 					{Object.keys(colors).map((color) => (
 						<ColorButton
 							key={color}

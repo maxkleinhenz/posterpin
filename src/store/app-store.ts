@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { PinColor } from "@/colors";
+import { colors, type PinColor } from "@/colors";
 
 export type Mode =
 	| {
@@ -16,7 +16,12 @@ export type Mode =
 			mode: "none";
 	  };
 
-export type PinFilter = { hung: boolean; tookDown: boolean; planned: boolean };
+export type PinFilter = {
+	hung: boolean;
+	tookDown: boolean;
+	planned: boolean;
+	colors: Record<PinColor, boolean>;
+};
 
 export type FocusedPin = {
 	id: string;
@@ -24,11 +29,15 @@ export type FocusedPin = {
 	tookDownAt: Date | null;
 	Color: PinColor;
 };
+const allColors = Object.fromEntries(
+	Object.keys(colors).map((color) => [color, true]),
+) as Record<PinColor, boolean>;
 
 export const defaultFilter = {
 	hung: true,
 	tookDown: true,
 	planned: true,
+	colors: allColors,
 } as const satisfies PinFilter;
 
 export const defaultAuracyVisiblity = false;

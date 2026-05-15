@@ -1,7 +1,8 @@
 import { useMediaQuery } from "@uidotdev/usehooks";
-import { MapIcon, SlidersHorizontal } from "lucide-react";
+import { Check, MapIcon, SlidersHorizontal } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
+import { colors, type PinColor } from "@/colors";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Item, ItemContent, ItemGroup, ItemTitle } from "@/components/ui/item";
@@ -22,12 +23,11 @@ import {
 import {
 	defaultAuracyVisiblity,
 	defaultFilter,
-	type PinFilter,
 	useAppStore,
 } from "@/store/app-store";
 
 const filterItems: {
-	key: keyof PinFilter;
+	key: "hung" | "tookDown" | "planned";
 	label: string;
 	color: string;
 }[] = [
@@ -62,9 +62,16 @@ export default function PinSettingsPopup() {
 			defaultFilter.hung !== pinFilter.hung ||
 			defaultFilter.planned !== pinFilter.planned ||
 			defaultFilter.tookDown !== pinFilter.tookDown ||
-			isAuracyVisible !== defaultAuracyVisiblity
+			isAuracyVisible !== defaultAuracyVisiblity ||
+			Object.values(pinFilter.colors).some((c) => !c)
 		);
-	}, [pinFilter, isAuracyVisible]);
+	}, [
+		pinFilter.hung,
+		pinFilter.planned,
+		pinFilter.tookDown,
+		isAuracyVisible,
+		pinFilter.colors,
+	]);
 
 	return (
 		<Sheet
@@ -102,7 +109,7 @@ export default function PinSettingsPopup() {
 						Anpassungen von Karteneinstellungen
 					</SheetDescription>
 				</SheetHeader>
-				<ItemGroup className="rounded-md overflow-auto">
+				<ItemGroup className="rounded-md overflow-auto px-2">
 					<Item>
 						<ItemContent className="flex gap-2 items-start">
 							<Button
@@ -121,32 +128,52 @@ export default function PinSettingsPopup() {
 							<div>
 								<ItemTitle>Plakate anzeigen</ItemTitle>
 							</div>
-							<div className="grid">
-								{filterItems.map(({ key, label, color }) => (
-									<Label
-										key={key}
-										className="flex items-center gap-2 cursor-pointer font-normal py-2"
-									>
-										<Checkbox
-											checked={pinFilter[key]}
-											onCheckedChange={(checked) =>
+							<div className="space-y-4">
+								<div className="flex flex-wrap gap-x-10 gap-y-2">
+									{filterItems.map(({ key, label }) => (
+										<Label
+											key={key}
+											className="flex items-center gap-2 cursor-pointer font-normal py-2"
+										>
+											<Checkbox
+												checked={pinFilter[key]}
+												onCheckedChange={(checked) =>
+													setPinFilter({
+														...pinFilter,
+														[key]: checked === true,
+													})
+												}
+											/>
+											{label}
+										</Label>
+									))}
+								</div>
+								<div className="flex flex-wrap gap-2">
+									{Object.keys(colors).map((color) => (
+										<ColorButton
+											key={color}
+											color={color as keyof typeof colors}
+											selected={pinFilter.colors[color as PinColor]}
+											onToggle={() =>
 												setPinFilter({
 													...pinFilter,
-													[key]: checked === true,
+													colors: {
+														...pinFilter.colors,
+														[color as PinColor]:
+															!pinFilter.colors[color as PinColor],
+													},
 												})
 											}
 										/>
-										<span className={`size-3 rounded-full ${color}`} />
-										{label}
-									</Label>
-								))}
+									))}
+								</div>
 							</div>
 						</ItemContent>
 					</Item>
 					<Item className="hover:bg-muted/50">
 						<ItemContent className="grid gap-2">
 							<div>
-								<ItemTitle>Genauigkeit</ItemTitle>
+								<ItemTitle>Karte</ItemTitle>
 							</div>
 							<div className="grid gap-2">
 								<Label className="flex items-center gap-2 cursor-pointer font-normal">
@@ -177,5 +204,26 @@ export default function PinSettingsPopup() {
 				</ItemGroup>
 			</SheetContent>
 		</Sheet>
+	);
+}
+
+function ColorButton({
+	color,
+	selected,
+	onToggle,
+}: {
+	color: keyof typeof colors;
+	selected: boolean;
+	onToggle: () => void;
+}) {
+	return (
+		<Button
+			className={`size-10 ${colors[color].bg}`}
+			onClick={() => onToggle()}
+		>
+			{selected && (
+				<Check className="stroke-3 rounded-full bg-muted text-muted-foreground size-4 p-0.5" />
+			)}
+		</Button>
 	);
 }

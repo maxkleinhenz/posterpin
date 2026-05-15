@@ -57,12 +57,12 @@ export default function MenuSheet({ campaign }: { campaign: Campaign }) {
 	const pins = useMemo(() => {
 		if (!list.data) return [];
 		return list.data.filter((pin) => {
-			if (pin.hangAt === null && pin.tookDownAt === null)
-				return pinFilter.planned;
+			if (!pinFilter.colors[pin.color as PinColor]) return false;
+			if (pin.hangAt === null && pin.tookDownAt === null) return pinFilter.planned;
 			if (pin.tookDownAt !== null) return pinFilter.tookDown;
 			return pinFilter.hung;
 		});
-	}, [list.data, pinFilter]);
+	}, [list.data, pinFilter.hung, pinFilter.tookDown, pinFilter.planned, pinFilter.colors]);
 
 	function flyToPin(pin: { latitude: number; longitude: number }) {
 		if (!map) return;
