@@ -1,4 +1,5 @@
-import { Check } from "lucide-react";
+import { Check, X } from "lucide-react";
+import { useShallow } from "zustand/react/shallow";
 import ColorWheel from "@/assets/color-wheel.svg";
 import { colors, type PinColor } from "@/colors";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import {
 	PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { useAppStore } from "@/store/app-store";
 
 export default function PinColorPopover({
 	selectedColor,
@@ -21,6 +23,12 @@ export default function PinColorPopover({
 	onSelectColor: (color: PinColor) => void;
 	wheelClassName?: string;
 }) {
+	const { pinFilter } = useAppStore(
+		useShallow((state) => ({
+			pinFilter: state.pinFilter,
+		})),
+	);
+
 	return (
 		<Popover>
 			<PopoverTrigger asChild>
@@ -43,12 +51,13 @@ export default function PinColorPopover({
 					</PopoverDescription>
 				</PopoverHeader>
 				<div className="flex flex-wrap gap-2 py-2">
-					{Object.keys(colors).map((color) => (
+					{Object.entries(pinFilter.colors).map(([color, value]) => (
 						<ColorButton
 							key={color}
-							color={color as keyof typeof colors}
-							selectedColor={selectedColor}
+							color={color as PinColor}
+							selected={color === selectedColor}
 							onSelectColor={onSelectColor}
+							disabled={!value}
 						/>
 					))}
 				</div>
@@ -59,20 +68,26 @@ export default function PinColorPopover({
 
 function ColorButton({
 	color,
-	selectedColor,
+	selected,
+	disabled,
 	onSelectColor,
 }: {
-	color: keyof typeof colors;
-	selectedColor: PinColor;
+	color: PinColor;
+	selected: boolean;
+	disabled?: boolean;
 	onSelectColor: (color: PinColor) => void;
 }) {
 	return (
 		<Button
 			className={`size-10 ${colors[color].bg}`}
 			onClick={() => onSelectColor(color)}
+			disabled={disabled}
 		>
-			{color === selectedColor && (
+			{selected && (
 				<Check className="stroke-3 rounded-full bg-muted text-muted-foreground size-4 p-0.5" />
+			)}
+			{disabled && (
+				<X className="stroke-3 rounded-full bg-muted text-muted-foreground size-4 p-0.5" />
 			)}
 		</Button>
 	);

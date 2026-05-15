@@ -57,7 +57,18 @@ export const useAppStore = create<AppState>((set) => ({
 	mode: { mode: "none" },
 	setMode: (mode) => set(() => ({ mode: mode })),
 	pinFilter: { ...defaultFilter },
-	setPinFilter: (filter) => set(() => ({ pinFilter: filter })),
+	setPinFilter: (filter) =>
+		set((state) => {
+			// If the currently selected color is disabled in the new filter, switch to the first enabled color
+			const updates: Partial<AppState> = { pinFilter: filter };
+			if (!filter.colors[state.pinColor]) {
+				const firstEnabled = (Object.keys(filter.colors) as PinColor[]).find(
+					(c) => filter.colors[c],
+				);
+				if (firstEnabled) updates.pinColor = firstEnabled;
+			}
+			return updates;
+		}),
 	isAuracyVisible: defaultAuracyVisiblity,
 	setIsAuracyVisible: (visible) => set(() => ({ isAuracyVisible: visible })),
 	pinColor: "yellow",

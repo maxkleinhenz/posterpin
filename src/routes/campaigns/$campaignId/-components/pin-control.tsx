@@ -1,6 +1,6 @@
 import { useParams } from "@tanstack/react-router";
 import type { Id } from "convex/_generated/dataModel";
-import { LocateOff } from "lucide-react";
+import { FilterX, LocateOff } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { colors } from "@/colors";
 import { Button } from "@/components/ui/button";
@@ -20,16 +20,17 @@ export default function PinControl({
 }) {
 	const { campaignId } = useParams({ from: "/campaigns/$campaignId/" });
 	const addPinMutation = useAddPinMutation();
-	const { mode, setMode, pinColor, setPinColor } = useAppStore(
+	const { mode, setMode, pinColor, setPinColor, pinFilter } = useAppStore(
 		useShallow((state) => ({
 			mode: state.mode,
 			setMode: state.setMode,
 			pinColor: state.pinColor,
 			setPinColor: state.setPinColor,
+			pinFilter: state.pinFilter,
 		})),
 	);
 
-	console.log({ pinColor });
+	const anyColorEnabled = Object.values(pinFilter.colors).some((c) => c);
 
 	const longitude = geolocation.longitude;
 	const latitude = geolocation.latitude;
@@ -56,29 +57,35 @@ export default function PinControl({
 	return (
 		<div className="flex gap-2 absolute left-1/2 -translate-x-1/2 bottom-10 justify-center">
 			{canSetPins && longitude != null && latitude != null ? (
-				<ButtonGroup>
-					<Button
-						className={`shadow-md p-6 ${colors[pinColor].bg} ${colors[pinColor].text}`}
-						size="lg"
-						onClick={() => {
-							addPinMutation.mutate({
-								latitude: latitude,
-								longitude: longitude,
-								campaignId: campaignId as Id<"campaigns">,
-								color: pinColor,
-							});
-						}}
-					>
-						<AddPin className="size-5" /> Plakat hängen
-					</Button>
-					<PinColorPopover
-						selectedColor={pinColor}
-						onSelectColor={(color) => {
-							console.log(color);
-							setPinColor(color);
-						}}
-					/>
-				</ButtonGroup>
+				anyColorEnabled ? (
+					<ButtonGroup>
+						<Button
+							className={`shadow-md p-6 ${colors[pinColor].bg} ${colors[pinColor].text}`}
+							size="lg"
+							onClick={() => {
+								addPinMutation.mutate({
+									latitude: latitude,
+									longitude: longitude,
+									campaignId: campaignId as Id<"campaigns">,
+									color: pinColor,
+								});
+							}}
+						>
+							<AddPin className="size-5" /> Plakat hängen
+						</Button>
+						<PinColorPopover
+							selectedColor={pinColor}
+							onSelectColor={(color) => {
+								console.log(color);
+								setPinColor(color);
+							}}
+						/>
+					</ButtonGroup>
+				) : (
+					<div className="flex gap-2 items-center bg-white text-sm p-2 rounded-full shadow-md">
+						<FilterX className="size-5" /> Keine Farbe ausgewählt
+					</div>
+				)
 			) : (
 				<div className="flex gap-2 items-center bg-white text-sm p-2 rounded-full">
 					<LocateOff className="size-5" /> Standort nicht verfügbar
