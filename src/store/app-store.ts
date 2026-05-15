@@ -22,6 +22,7 @@ export type FocusedPin = {
 	id: string;
 	hangAt: Date | null;
 	tookDownAt: Date | null;
+	Color: PinColor;
 };
 
 export const defaultFilter = {

@@ -259,20 +259,6 @@ export default function PinsLayer({
 
 	return (
 		<>
-			{pinFilter.hung && (
-				<Source
-					id={hungSourceId}
-					cluster
-					clusterMaxZoom={16}
-					clusterRadius={30}
-					clusterProperties={hungClusterProperties}
-					{...hungGeoJSON}
-				>
-					<Layer {...hungClusterLayer} />
-					<Layer {...hungClusterCountLayer} />
-					<Layer {...pinsUnclusteredPointLayer} />
-				</Source>
-			)}
 			{pinFilter.tookDown && (
 				<Source
 					id={tookDownSourceId}
@@ -297,6 +283,20 @@ export default function PinsLayer({
 					<Layer {...plannedClusterLayer} />
 					<Layer {...plannedClusterCountLayer} />
 					<Layer {...pinsPlannedLayer} />
+				</Source>
+			)}
+			{pinFilter.hung && (
+				<Source
+					id={hungSourceId}
+					cluster
+					clusterMaxZoom={16}
+					clusterRadius={30}
+					clusterProperties={hungClusterProperties}
+					{...hungGeoJSON}
+				>
+					<Layer {...hungClusterLayer} />
+					<Layer {...hungClusterCountLayer} />
+					<Layer {...pinsUnclusteredPointLayer} />
 				</Source>
 			)}
 		</>

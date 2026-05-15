@@ -5,6 +5,7 @@ import {
 	hangPinAgainSchema,
 	insertPinSchema,
 	takePinDownSchema,
+	updatePinColorSchema,
 } from "./schema";
 
 export const seed = internalMutation(async (ctx) => {
@@ -98,5 +99,12 @@ export const hangAgain = mutation({
 			hangAt: hangAt,
 			tookDownAt: null,
 		});
+	},
+});
+
+export const updateColor = mutation({
+	args: updatePinColorSchema,
+	handler: async (ctx, { id, color }) => {
+		await ctx.db.patch(id, { color });
 	},
 });

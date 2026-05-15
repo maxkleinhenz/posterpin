@@ -20,13 +20,16 @@ export default function PinControl({
 }) {
 	const { campaignId } = useParams({ from: "/campaigns/$campaignId/" });
 	const addPinMutation = useAddPinMutation();
-	const { mode, setMode, pinColor } = useAppStore(
+	const { mode, setMode, pinColor, setPinColor } = useAppStore(
 		useShallow((state) => ({
 			mode: state.mode,
 			setMode: state.setMode,
 			pinColor: state.pinColor,
+			setPinColor: state.setPinColor,
 		})),
 	);
+
+	console.log({ pinColor });
 
 	const longitude = geolocation.longitude;
 	const latitude = geolocation.latitude;
@@ -68,7 +71,13 @@ export default function PinControl({
 					>
 						<AddPin className="size-5" /> Plakat hängen
 					</Button>
-					<PinColorPopover />
+					<PinColorPopover
+						selectedColor={pinColor}
+						onSelectColor={(color) => {
+							console.log(color);
+							setPinColor(color);
+						}}
+					/>
 				</ButtonGroup>
 			) : (
 				<div className="flex gap-2 items-center bg-white text-sm p-2 rounded-full">

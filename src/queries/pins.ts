@@ -1,7 +1,13 @@
 import { convexQuery } from "@convex-dev/react-query";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useConvex } from "convex/react";
-import type { HangPinAgain, InsertPin, Pin, TakePinDown } from "convex/schema";
+import type {
+	HangPinAgain,
+	InsertPin,
+	Pin,
+	TakePinDown,
+	UpdatePinColor,
+} from "convex/schema";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 
@@ -346,6 +352,64 @@ export function useHangAgainPinMutation() {
 			if (existingPin) {
 				queryClient.invalidateQueries({
 					queryKey: pinQueries.list(existingPin.campaignId).queryKey,
+				});
+				return;
+			}
+
+			queryClient.invalidateQueries();
+		},
+	});
+}
+
+export function useUpdatePinColorMutation() {
+	const queryClient = useQueryClient();
+	const convex = useConvex();
+
+	return useMutation({
+		mutationFn: async (pin: UpdatePinColor) => {
+			return await convex.mutation(api.pins.updateColor, pin);
+		},
+		onMutate: async (pin) => {
+			const existingPin = await getPinById(queryClient, convex, pin.id);
+			if (!existingPin) throw new Error("Pin not found");
+
+			await queryClient.cancelQueries({
+				queryKey: pinQueries.list(existingPin.campaignId).queryKey,
+			});
+
+			const previousPins = queryClient.getQueryData<Pin[]>(
+				pinQueries.list(existingPin.campaignId).queryKey,
+			);
+			const newPin = { ...existingPin, color: pin.color };
+
+			queryClient.setQueryData<Pin[]>(
+				pinQueries.list(existingPin.campaignId).queryKey,
+				(old) => old?.map((p) => (p._id === pin.id ? newPin : p)) ?? [],
+			);
+			queryClient.setQueryData(pinQueries.getById(pin.id).queryKey, newPin);
+
+			return { previousPins, newPin };
+		},
+		onError: (_error, _variables, context) => {
+			if (context?.previousPins) {
+				queryClient.setQueryData(
+					pinQueries.list(context.newPin.campaignId).queryKey,
+					context.previousPins,
+				);
+				queryClient.setQueryData(
+					pinQueries.getById(context.newPin._id).queryKey,
+					context.newPin,
+				);
+			}
+		},
+		onSettled: async (_data, _error, variables) => {
+			const existingPin = await getPinById(queryClient, convex, variables.id);
+			if (existingPin) {
+				queryClient.invalidateQueries({
+					queryKey: pinQueries.list(existingPin.campaignId).queryKey,
+				});
+				queryClient.invalidateQueries({
+					queryKey: pinQueries.getById(variables.id).queryKey,
 				});
 				return;
 			}

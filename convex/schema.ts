@@ -57,6 +57,12 @@ export const hangPinAgainSchema = v.object({
 });
 export type HangPinAgain = Infer<typeof hangPinAgainSchema>;
 
+export const updatePinColorSchema = v.object({
+	id: v.id("pins"),
+	color: pin.fields.color,
+});
+export type UpdatePinColor = Infer<typeof updatePinColorSchema>;
+
 export type Campaign = Doc<"campaigns">;
 const campaign = schema.tables.campaigns.validator;
 export const insertCampaignSchema = v.object({

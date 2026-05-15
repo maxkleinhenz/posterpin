@@ -16,6 +16,7 @@ import MapLibre, {
 	Marker,
 } from "react-map-gl/maplibre";
 import { useShallow } from "zustand/react/shallow";
+import type { PinColor } from "@/colors";
 import { Button } from "@/components/ui/button";
 import {
 	Tooltip,
@@ -161,6 +162,7 @@ function MapComponent({ campaign }: { campaign: Campaign }) {
 						feature.properties?.tookDownAt != null
 							? new Date(feature.properties.tookDownAt as number)
 							: null,
+					Color: feature.properties?.colorKey as PinColor,
 				},
 			});
 

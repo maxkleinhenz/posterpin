@@ -3,6 +3,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import type { Id } from "convex/_generated/dataModel";
 import { useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
+import type { PinColor } from "@/colors";
 import { Button } from "@/components/ui/button";
 import {
 	Sheet,
@@ -16,13 +17,16 @@ import {
 	useHangAgainPinMutation,
 	useRemovePinMutation,
 	useTakeDownPinMutation,
+	useUpdatePinColorMutation,
 } from "@/queries/pins";
 import { useAppStore } from "@/store/app-store";
+import PinColorPopover from "./pin-color-popover";
 
 export default function PinDetailsSheet() {
 	const takePinDownMutation = useTakeDownPinMutation();
 	const hangAgainPinMutation = useHangAgainPinMutation();
 	const removePinMutation = useRemovePinMutation();
+	const updatePinColorMutation = useUpdatePinColorMutation();
 
 	const [open, setOpen] = useState(false);
 	const { mode, setMode } = useAppStore(
@@ -41,6 +45,23 @@ export default function PinDetailsSheet() {
 	function close() {
 		setOpen(false);
 		setMode({ mode: "none" });
+	}
+
+	function updateFocusedPinColor(color: PinColor) {
+		if (focusedPin == null) return;
+
+		updatePinColorMutation.mutate({
+			id: focusedPin.id as Id<"pins">,
+			color,
+		});
+
+		setMode({
+			mode: "focused-pin",
+			focusedPin: {
+				...focusedPin,
+				Color: color,
+			},
+		});
 	}
 
 	const focusedPin = mode.mode === "focused-pin" ? mode.focusedPin : null;
@@ -62,9 +83,9 @@ export default function PinDetailsSheet() {
 								: `Gehangen am ${focusedPin.hangAt.toLocaleString()}`}
 					</SheetDescription>
 				</SheetHeader>
-				<div className="p-4">
+				<div className="flex items-center gap-2 p-4">
 					{focusedPin == null ? null : focusedPin.hangAt == null ? (
-						<div className="flex gap-2">
+						<>
 							<Button
 								variant="default"
 								onClick={() => {
@@ -86,7 +107,7 @@ export default function PinDetailsSheet() {
 							>
 								<RemovePin /> Löschen
 							</Button>
-						</div>
+						</>
 					) : focusedPin.tookDownAt == null ? (
 						<Button
 							variant="destructive"
@@ -113,6 +134,13 @@ export default function PinDetailsSheet() {
 						>
 							<AddPin /> Plakat wieder aufhängen
 						</Button>
+					)}
+					{focusedPin?.Color != null && (
+						<PinColorPopover
+							selectedColor={focusedPin?.Color}
+							onSelectColor={updateFocusedPinColor}
+							wheelClassName="size-5"
+						/>
 					)}
 				</div>
 			</SheetContent>
