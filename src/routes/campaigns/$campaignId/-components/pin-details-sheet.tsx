@@ -79,8 +79,20 @@ export default function PinDetailsSheet() {
 						{focusedPin?.hangAt == null
 							? "Noch nicht aufgehangen (geplant)"
 							: focusedPin.tookDownAt != null
-								? `Abgehangen am ${focusedPin.tookDownAt.toLocaleString()}`
-								: `Gehangen am ${focusedPin.hangAt.toLocaleString()}`}
+								? `Abgehangen am ${focusedPin.tookDownAt.toLocaleString(
+										navigator.language,
+										{
+											dateStyle: "short",
+											timeStyle: "short",
+										},
+									)}`
+								: `Gehangen am ${focusedPin.hangAt.toLocaleString(
+										navigator.language,
+										{
+											dateStyle: "short",
+											timeStyle: "short",
+										},
+									)}`}
 					</SheetDescription>
 				</SheetHeader>
 				<div className="flex items-center gap-2 p-4">

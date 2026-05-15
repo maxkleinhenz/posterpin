@@ -153,7 +153,12 @@ export default function MenuSheet({ campaign }: { campaign: Campaign }) {
 										: item.tookDownAt != null
 											? {
 													icon: <PinMarkerOff className="size-5" />,
-													label: `Abgenommen am ${new Date(item.tookDownAt).toLocaleString()}`,
+													label: `Abgehangen am ${new Date(
+														item.tookDownAt,
+													).toLocaleString(navigator.language, {
+														dateStyle: "short",
+														timeStyle: "short",
+													})}`,
 													muted: true,
 													strike: true,
 													actionIcon: <AddPin />,
@@ -166,7 +171,12 @@ export default function MenuSheet({ campaign }: { campaign: Campaign }) {
 												}
 											: {
 													icon: <PinMarker className="size-5" />,
-													label: `Gehangen am ${new Date(item.hangAt ?? "").toLocaleString()}`,
+													label: `Gehangen am ${new Date(
+														item.hangAt ?? "",
+													).toLocaleString(navigator.language, {
+														dateStyle: "short",
+														timeStyle: "short",
+													})}`,
 													muted: false,
 													strike: false,
 													actionIcon: <RemovePin />,
