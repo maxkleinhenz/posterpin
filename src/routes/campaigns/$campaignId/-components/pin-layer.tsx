@@ -31,6 +31,7 @@ function getPinColorKey(color: string | undefined): PinColor {
 
 function createDominantColorExpression(
 	getValue: (color: PinColor) => string,
+	fallback: string,
 ): ExpressionSpecification {
 	const expression: unknown[] = ["case"];
 
@@ -50,10 +51,17 @@ function createDominantColorExpression(
 		);
 	}
 
-	expression.push(colors.yellow.rgb);
+	expression.push(fallback);
 
 	return expression as ExpressionSpecification;
 }
+
+const hungClusterProperties = Object.fromEntries(
+	pinColors.map((color) => [
+		`colorCount_${color}`,
+		["+", ["case", ["==", ["get", "colorKey"], color], 1, 0]],
+	]),
+);
 
 export const hungClusterLayer = {
 	id: "pins-cluster-hung",
@@ -61,7 +69,10 @@ export const hungClusterLayer = {
 	filter: ["has", "point_count"],
 	paint: {
 		"circle-radius": ["step", ["get", "point_count"], 25, 100, 35, 750, 45],
-		"circle-color": createDominantColorExpression((color) => colors[color].rgb),
+		"circle-color": createDominantColorExpression(
+			(color) => colors[color].rgb,
+			colors.yellow.rgb,
+		),
 		"circle-stroke-width": 2,
 		"circle-stroke-color": "#ffffff",
 	},
@@ -77,10 +88,12 @@ const hungClusterCountLayer = {
 		"text-size": 16,
 	},
 	paint: {
-		"text-color": createDominantColorExpression((color) =>
-			colors[getPinColorKey(color)].text === "text-black"
-				? "#000000"
-				: "#ffffff",
+		"text-color": createDominantColorExpression(
+			(color) =>
+				colors[getPinColorKey(color)].text === "text-black"
+					? "#000000"
+					: "#ffffff",
+			"#000000",
 		),
 	},
 } as const satisfies LayerProps;
@@ -252,10 +265,7 @@ export default function PinsLayer({
 					cluster
 					clusterMaxZoom={16}
 					clusterRadius={30}
-					clusterProperties={pinColors.map((color) => [
-						`colorCount_${color}`,
-						["+", ["case", ["==", ["get", "colorKey"], color], 1, 0]],
-					])}
+					clusterProperties={hungClusterProperties}
 					{...hungGeoJSON}
 				>
 					<Layer {...hungClusterLayer} />
