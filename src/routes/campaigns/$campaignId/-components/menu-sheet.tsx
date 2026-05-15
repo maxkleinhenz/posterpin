@@ -3,6 +3,7 @@ import { useMediaQuery } from "@uidotdev/usehooks";
 import type { Id } from "convex/_generated/dataModel";
 import type { Campaign } from "convex/schema";
 import { Focus, Menu } from "lucide-react";
+import { colors, type PinColor } from "@/colors";
 import { Button } from "@/components/ui/button";
 import { VirtualScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -18,7 +19,13 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { AddPin, PinMarker, PinMarkerOff, PinMarkerPlanned, RemovePin } from "@/icons";
+import {
+	AddPin,
+	PinMarker,
+	PinMarkerOff,
+	PinMarkerPlanned,
+	RemovePin,
+} from "@/icons";
 import {
 	pinQueries,
 	useHangAgainPinMutation,
@@ -137,29 +144,44 @@ export default function MenuSheet({ campaign }: { campaign: Campaign }) {
 												strike: false,
 												actionIcon: <AddPin />,
 												actionLabel: "Jetzt aufhängen",
-												onAction: () => hangAgainPinMutation.mutate({ id: item._id as Id<"pins">, hangAt: Date.now() }),
+												onAction: () =>
+													hangAgainPinMutation.mutate({
+														id: item._id as Id<"pins">,
+														hangAt: Date.now(),
+													}),
 											}
 										: item.tookDownAt != null
-										? {
-												icon: <PinMarkerOff className="size-5" />,
-												label: `Abgenommen am ${new Date(item.tookDownAt).toLocaleString()}`,
-												muted: true,
-												strike: true,
-												actionIcon: <AddPin />,
-												actionLabel: "Plakat wieder aufhängen",
-												onAction: () => hangAgainPinMutation.mutate({ id: item._id as Id<"pins">, hangAt: Date.now() }),
-											}
-										: {
-												icon: <PinMarker className="size-5" />,
-												label: `Gehangen am ${new Date(item.hangAt ?? "").toLocaleString()}`,
-												muted: false,
-												strike: false,
-												actionIcon: <RemovePin />,
-												actionLabel: "Plakat abhängen",
-												onAction: () => takeDownPinMutation.mutate({ id: item._id as Id<"pins">, tookDownAt: Date.now() }),
-											};
+											? {
+													icon: <PinMarkerOff className="size-5" />,
+													label: `Abgenommen am ${new Date(item.tookDownAt).toLocaleString()}`,
+													muted: true,
+													strike: true,
+													actionIcon: <AddPin />,
+													actionLabel: "Plakat wieder aufhängen",
+													onAction: () =>
+														hangAgainPinMutation.mutate({
+															id: item._id as Id<"pins">,
+															hangAt: Date.now(),
+														}),
+												}
+											: {
+													icon: <PinMarker className="size-5" />,
+													label: `Gehangen am ${new Date(item.hangAt ?? "").toLocaleString()}`,
+													muted: false,
+													strike: false,
+													actionIcon: <RemovePin />,
+													actionLabel: "Plakat abhängen",
+													onAction: () =>
+														takeDownPinMutation.mutate({
+															id: item._id as Id<"pins">,
+															tookDownAt: Date.now(),
+														}),
+												};
 								return (
-									<div className="grid grid-cols-[1fr_auto] gap-4 p-2 rounded-md">
+									<div className="grid grid-cols-[6px_1fr_auto] gap-2 rounded-md">
+										<div
+											className={`rounded-full ${colors[item.color as PinColor].bg}`}
+										/>
 										<div className={pin.muted ? "text-muted-foreground" : ""}>
 											<div className="flex gap-1 items-center">
 												{pin.icon}
