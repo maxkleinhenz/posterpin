@@ -69,7 +69,7 @@ export default function MenuSheet({ campaign }: { campaign: Campaign }) {
 		const padding = isSmallDevice
 			? {
 					top: 0,
-					bottom: map.getContainer().clientHeight * 0.8, // shadcn caps height at 80vh
+					bottom: map.getContainer().clientHeight * 0.65,
 					left: 0,
 					right: 0,
 				}
@@ -119,7 +119,7 @@ export default function MenuSheet({ campaign }: { campaign: Campaign }) {
 					</TooltipContent>
 				</Tooltip>
 				<SheetContent
-					className="rounded-t-md w-full md:w-96 h-[80dvh] md:h-dvh"
+					className="rounded-t-md w-full md:w-96 h-[70dvh] md:h-dvh"
 					side={isSmallDevice ? "bottom" : "left"}
 				>
 					<div className="grid grid-rows-[auto_1fr] gap-2 overflow-hidden h-full">
