@@ -74,9 +74,10 @@ const DEFAULT_CENTER = {
 	latitude: 51.0299,
 };
 
-const dateFormatter = new Intl.DateTimeFormat(navigator.language, {
-	dateStyle: "short",
-});
+const dateFormatter = new Intl.DateTimeFormat(
+	typeof navigator === "undefined" ? "de-DE" : navigator.language,
+	{ dateStyle: "short" },
+);
 
 export default function CreateCampaign() {
 	const [dialogOpen, setDialogOpen] = useState(false);
