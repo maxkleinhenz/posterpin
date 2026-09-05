@@ -38,6 +38,7 @@ import {
 import { env } from "@/env";
 import { cn } from "@/lib/utils";
 import { useAddCampaignMutation } from "@/queries/campaigns";
+import { getMapStyleUrl, useMapSettings } from "@/store/map-settings";
 
 const formSchema = z
 	.object({
@@ -81,6 +82,7 @@ const dateFormatter = new Intl.DateTimeFormat(
 );
 
 export default function CreateCampaign() {
+	const mapStyle = useMapSettings((state) => state.mapStyle);
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const nameInputId = useId();
 	const descriptionInputId = useId();
@@ -361,7 +363,7 @@ export default function CreateCampaign() {
 										pitchWithRotate={false}
 										keyboard={true}
 										style={{ width: "100%", height: "100%" }}
-										mapStyle={`https://api.maptiler.com/maps/streets/style.json?key=${env.VITE_MAPTILER_KEY}`}
+										mapStyle={getMapStyleUrl(mapStyle, env.VITE_MAPTILER_KEY)}
 										onMove={(event) =>
 											throttleMapMove(
 												event.viewState.longitude,

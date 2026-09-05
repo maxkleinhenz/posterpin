@@ -35,6 +35,7 @@ import {
 	useUpdatePinPositionMutation,
 } from "@/queries/pins";
 import { type Mode, useAppStore } from "@/store/app-store";
+import { getMapStyleUrl, useMapSettings } from "@/store/map-settings";
 
 import AccuracyCricle from "./-components/map-accuracy-cricle";
 import MapControls from "./-components/map-control";
@@ -117,6 +118,7 @@ type DraggingPin = { id: string; latitude: number; longitude: number };
 
 function MapComponent({ campaign }: { campaign: Campaign }) {
 	const navigate = useNavigate();
+	const mapStyle = useMapSettings((state) => state.mapStyle);
 
 	const [hoverCursor, setHoverCursor] = useState<{
 		mode: Mode;
@@ -308,7 +310,7 @@ function MapComponent({ campaign }: { campaign: Campaign }) {
 						keyboard={true}
 						clickTolerance={DRAG_THRESHOLD_PX}
 						style={{ width: "100%", height: "100%" }}
-						mapStyle={`https://api.maptiler.com/maps/streets/style.json?key=${env.VITE_MAPTILER_KEY}`}
+						mapStyle={getMapStyleUrl(mapStyle, env.VITE_MAPTILER_KEY)}
 						interactiveLayerIds={interactiveLayerIds as unknown as string[]}
 						cursor={cursor}
 						onClick={onMapClick}

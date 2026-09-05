@@ -1,5 +1,11 @@
 // @vitest-environment jsdom
-import { act, cleanup, render } from "@testing-library/react";
+import {
+	act,
+	cleanup,
+	fireEvent,
+	render,
+	screen,
+} from "@testing-library/react";
 import type { ComponentType, PropsWithChildren } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
@@ -52,6 +58,7 @@ vi.mock("@/queries/pins", () => ({
 	}),
 }));
 vi.mock("@/env", () => ({ env: { VITE_MAPTILER_KEY: "test" } }));
+vi.mock("@uidotdev/usehooks", () => ({ useMediaQuery: () => false }));
 vi.mock("@/lib/use-geolocation", () => ({
 	useGeolocation: () => ({
 		latitude: null,
@@ -103,13 +110,16 @@ vi.mock(
 );
 
 import { TooltipProvider } from "../src/components/ui/tooltip";
+import PinSettingsPopup from "../src/routes/campaigns/$campaignId/-components/pin-settings";
 import { Route } from "../src/routes/campaigns/$campaignId/index";
 import { defaultFilter, useAppStore } from "../src/store/app-store";
+import { useMapSettings } from "../src/store/map-settings";
 
 beforeEach(() => {
 	vi.clearAllMocks();
 	state.pending = 0;
 	state.rendered = [];
+	useMapSettings.getState().setMapStyle("streets");
 	useAppStore.setState({
 		mode: { mode: "none" },
 		pinFilter: defaultFilter,
@@ -125,6 +135,43 @@ function show() {
 		</TooltipProvider>,
 	);
 }
+
+it("switches the map from settings, saves the selection, and resets to streets", () => {
+	show();
+	render(
+		<TooltipProvider>
+			<PinSettingsPopup />
+		</TooltipProvider>,
+	);
+	fireEvent.click(screen.getByRole("button", { name: "Einstellungen" }));
+	expect(screen.queryByRole("combobox")).toBeNull();
+	expect(screen.getAllByRole("radio").length).toBe(4);
+	for (const [style, label] of [
+		["dataviz-v4-light", "Hell"],
+		["dataviz-v4-dark", "Dunkel"],
+		["hybrid-v4", "Satellit"],
+		["streets", "Standard"],
+	]) {
+		const card = screen.getByRole("radio", { name: label }) as HTMLInputElement;
+		fireEvent.click(card);
+		expect(card.checked).toBe(true);
+		expect(
+			card.closest("label")?.querySelector("img")?.getAttribute("src"),
+		).toContain(`/maps/${style}/256/`);
+		expect(state.props.mapStyle).toBe(
+			`https://api.maptiler.com/maps/${style}/style.json?key=test`,
+		);
+		expect(localStorage.getItem("posterpin-map-style")).toBe(style);
+	}
+	fireEvent.click(screen.getByRole("radio", { name: "Dunkel" }));
+	fireEvent.click(
+		screen.getByRole("button", { name: "Einstellungen zurücksetzen" }),
+	);
+	expect(state.props.mapStyle).toBe(
+		"https://api.maptiler.com/maps/streets/style.json?key=test",
+	);
+	expect(localStorage.getItem("posterpin-map-style")).toBe("streets");
+});
 function event(type: string, withPin = true, point = { x: 0, y: 0 }) {
 	return {
 		type,

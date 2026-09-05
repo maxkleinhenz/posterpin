@@ -328,17 +328,25 @@ export default function PinsLayer({
 	useEffect(() => {
 		const map = Object.values(maps)[0];
 		if (!map) return;
-		for (const color of pinColors) {
-			const rgb = colors[color].rgb;
-			const plannedId = `pin-planned-${color}`;
-			if (!map.hasImage(plannedId)) {
-				map.addImage(plannedId, createPinPatternImage(rgb, "stripes"));
+		const addPinImages = () => {
+			for (const color of pinColors) {
+				const rgb = colors[color].rgb;
+				const plannedId = `pin-planned-${color}`;
+				if (!map.hasImage(plannedId)) {
+					map.addImage(plannedId, createPinPatternImage(rgb, "stripes"));
+				}
+				const tookDownId = `pin-tookdown-${color}`;
+				if (!map.hasImage(tookDownId)) {
+					map.addImage(tookDownId, createPinPatternImage(rgb, "crosshatch"));
+				}
 			}
-			const tookDownId = `pin-tookdown-${color}`;
-			if (!map.hasImage(tookDownId)) {
-				map.addImage(tookDownId, createPinPatternImage(rgb, "crosshatch"));
-			}
-		}
+		};
+		addPinImages();
+		// Replacing the base style can discard the custom marker images.
+		map.on("style.load", addPinImages);
+		return () => {
+			map.off("style.load", addPinImages);
+		};
 	}, [maps]);
 
 	const pins = useQuery(pinQueries.list(campaignId as Id<"campaigns">));
