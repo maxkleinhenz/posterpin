@@ -1,4 +1,10 @@
-import { CircleMinus, CirclePlus, MapPin, MapPinOff, MapPinPlus } from "lucide-react";
+import {
+	CircleMinus,
+	CirclePlus,
+	MapPin,
+	MapPinOff,
+	MapPinPlus,
+} from "lucide-react";
 
 export const PinMarker = MapPin;
 export const PinMarkerOff = MapPinOff;

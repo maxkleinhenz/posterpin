@@ -1,25 +1,25 @@
 {
-  "projectName": "posterpin",
-  "mode": "file-router",
-  "typescript": true,
-  "packageManager": "pnpm",
-  "includeExamples": true,
-  "tailwind": true,
-  "addOnOptions": {},
-  "envVarValues": {
-    "CONVEX_DEPLOYMENT": "neighborly-squid-421",
-    "VITE_CONVEX_URL": "https://neighborly-squid-421.eu-west-1.convex.cloud/"
-  },
-  "git": false,
-  "routerOnly": false,
-  "version": 1,
-  "framework": "react-cra",
-  "chosenAddOns": [
-    "biome",
-    "nitro",
-    "convex",
-    "compiler",
-    "shadcn",
-    "tanstack-query"
-  ]
+	"projectName": "posterpin",
+	"mode": "file-router",
+	"typescript": true,
+	"packageManager": "pnpm",
+	"includeExamples": true,
+	"tailwind": true,
+	"addOnOptions": {},
+	"envVarValues": {
+		"CONVEX_DEPLOYMENT": "neighborly-squid-421",
+		"VITE_CONVEX_URL": "https://neighborly-squid-421.eu-west-1.convex.cloud/"
+	},
+	"git": false,
+	"routerOnly": false,
+	"version": 1,
+	"framework": "react-cra",
+	"chosenAddOns": [
+		"biome",
+		"nitro",
+		"convex",
+		"compiler",
+		"shadcn",
+		"tanstack-query"
+	]
 }
