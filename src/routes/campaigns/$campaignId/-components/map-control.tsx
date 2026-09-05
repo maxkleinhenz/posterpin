@@ -5,6 +5,11 @@ import {
 	ZoomIn,
 	ZoomOut,
 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useMap } from "react-map-gl/maplibre";
+import { toast } from "sonner";
+
+import "maplibre-gl/dist/maplibre-gl.css";
 import { Button } from "@/components/ui/button";
 import {
 	Tooltip,
@@ -15,11 +20,8 @@ import {
 	type UseGeolocationResult,
 	hasFreshLocation,
 } from "@/lib/use-geolocation";
-import "maplibre-gl/dist/maplibre-gl.css";
-import { useEffect, useRef, useState } from "react";
-import { useMap } from "react-map-gl/maplibre";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+
 import PinSettingsPopup from "./pin-settings";
 
 export default function MapControls({
@@ -69,7 +71,9 @@ export default function MapControls({
 	// Auto-center once when geo position first becomes available,
 	// then follow position changes when followMode is active.
 	const followModeRef = useRef(followMode);
-	followModeRef.current = followMode;
+	useEffect(() => {
+		followModeRef.current = followMode;
+	}, [followMode]);
 
 	useEffect(() => {
 		if (!map || latitude == null || longitude == null || !hasLocation) return;

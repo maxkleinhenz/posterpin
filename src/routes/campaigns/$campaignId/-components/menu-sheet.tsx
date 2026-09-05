@@ -3,6 +3,10 @@ import { useMediaQuery } from "@uidotdev/usehooks";
 import type { Id } from "convex/_generated/dataModel";
 import type { Campaign } from "convex/schema";
 import { Focus, Menu } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useMap } from "react-map-gl/maplibre";
+import { useShallow } from "zustand/react/shallow";
+
 import { colors } from "@/colors";
 import { Button } from "@/components/ui/button";
 import { VirtualScrollArea } from "@/components/ui/scroll-area";
@@ -26,6 +30,8 @@ import {
 	PinMarkerPlanned,
 	RemovePin,
 } from "@/icons";
+
+import "maplibre-gl/dist/maplibre-gl.css";
 import {
 	pinQueries,
 	useHangAgainPinMutation,
@@ -33,11 +39,8 @@ import {
 	useTakeDownPinMutation,
 } from "@/queries/pins";
 import { useAppStore } from "@/store/app-store";
+
 import { getPinStatus, normalizePinColor } from "../../../../../shared/pins";
-import "maplibre-gl/dist/maplibre-gl.css";
-import { useMemo, useState } from "react";
-import { useMap } from "react-map-gl/maplibre";
-import { useShallow } from "zustand/react/shallow";
 
 export default function MenuSheet({ campaign }: { campaign: Campaign }) {
 	const maps = useMap();

@@ -1,9 +1,8 @@
-import { useMemo } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
-
-import { cn } from "src/lib/utils";
+import { useMemo } from "react";
 import { Label } from "src/components/ui/label";
 import { Separator } from "src/components/ui/separator";
+import { cn } from "src/lib/utils";
 
 function FieldSet({ className, ...props }: React.ComponentProps<"fieldset">) {
 	return (
@@ -80,13 +79,12 @@ function Field({
 	className,
 	orientation = "vertical",
 	...props
-}: React.ComponentProps<"div"> & VariantProps<typeof fieldVariants>) {
+}: React.ComponentProps<"fieldset"> & VariantProps<typeof fieldVariants>) {
 	return (
-		<div
-			role="group"
+		<fieldset
 			data-slot="field"
 			data-orientation={orientation}
-			className={cn(fieldVariants({ orientation }), className)}
+			className={cn("min-w-0", fieldVariants({ orientation }), className)}
 			{...props}
 		/>
 	);

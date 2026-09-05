@@ -1,12 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
 import type { Id } from "convex/_generated/dataModel";
-import type { Pin } from "convex/schema";
-import { useId, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
+
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
 	Sheet,
 	SheetContent,
@@ -21,9 +18,9 @@ import {
 	useRemovePinMutation,
 	useTakeDownPinMutation,
 	useUpdatePinColorMutation,
-	useUpdatePinPositionMutation,
 } from "@/queries/pins";
 import { useAppStore } from "@/store/app-store";
+
 import { getPinStatus, normalizePinColor } from "../../../../../shared/pins";
 import PinColorPopover from "./pin-color-popover";
 
@@ -139,80 +136,9 @@ export default function PinDetailsSheet() {
 								wheelClassName="size-5"
 							/>
 						</div>
-						{status === "planned" && (
-							<PositionForm key={pin._id} pin={pin} disabled={busy} />
-						)}
 					</>
 				)}
 			</SheetContent>
 		</Sheet>
-	);
-}
-
-function PositionForm({ pin, disabled }: { pin: Pin; disabled: boolean }) {
-	const update = useUpdatePinPositionMutation();
-	const id = useId();
-	// Only edited fields override live coordinates until the save succeeds.
-	const [draft, setDraft] = useState<{
-		latitude?: string;
-		longitude?: string;
-	}>({});
-	return (
-		<form
-			className="px-4 pb-4"
-			onSubmit={(event) => {
-				event.preventDefault();
-				const data = new FormData(event.currentTarget);
-				update.mutate(
-					{
-						id: pin._id,
-						latitude: Number(data.get("latitude")),
-						longitude: Number(data.get("longitude")),
-					},
-					{ onSuccess: () => setDraft({}) },
-				);
-			}}
-		>
-			<fieldset disabled={disabled || update.isPending} className="grid gap-3">
-				<legend className="mb-2 text-sm font-medium">Position ändern</legend>
-				<div className="grid grid-cols-2 gap-3">
-					<div className="grid gap-2">
-						<Label htmlFor={`${id}-lat`}>Breitengrad</Label>
-						<Input
-							id={`${id}-lat`}
-							name="latitude"
-							type="number"
-							min={-90}
-							max={90}
-							step="any"
-							required
-							value={draft.latitude ?? String(pin.latitude)}
-							onChange={(event) =>
-								setDraft({ ...draft, latitude: event.target.value })
-							}
-						/>
-					</div>
-					<div className="grid gap-2">
-						<Label htmlFor={`${id}-lng`}>Längengrad</Label>
-						<Input
-							id={`${id}-lng`}
-							name="longitude"
-							type="number"
-							min={-180}
-							max={180}
-							step="any"
-							required
-							value={draft.longitude ?? String(pin.longitude)}
-							onChange={(event) =>
-								setDraft({ ...draft, longitude: event.target.value })
-							}
-						/>
-					</div>
-				</div>
-				<Button type="submit" variant="outline">
-					{update.isPending ? "Speichere…" : "Position speichern"}
-				</Button>
-			</fieldset>
-		</form>
 	);
 }

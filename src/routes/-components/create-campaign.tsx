@@ -3,9 +3,10 @@ import { useThrottledCallback } from "@tanstack/react-pacer";
 import { ClientOnly } from "@tanstack/react-router";
 import { CalendarIcon, CircleX, Plus } from "lucide-react";
 import { useId, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import MapLibre, { Marker } from "react-map-gl/maplibre";
 import { z } from "zod";
+
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -89,7 +90,6 @@ export default function CreateCampaign() {
 	const addCampaignMutation = useAddCampaignMutation();
 
 	const form = useForm<FormValues, undefined, SubmitValues>({
-		// @ts-expect-error zodResolver types are weird
 		resolver: zodResolver(formSchema),
 		defaultValues: {
 			name: "",
@@ -100,9 +100,10 @@ export default function CreateCampaign() {
 			latitude: DEFAULT_CENTER.latitude,
 		},
 	});
-	const watchedName = form.watch("name");
-	const watchedLongitude = form.watch("longitude");
-	const watchedLatitude = form.watch("latitude");
+	const [watchedName, watchedLongitude, watchedLatitude] = useWatch({
+		control: form.control,
+		name: ["name", "longitude", "latitude"],
+	});
 
 	function resetForm() {
 		form.reset();

@@ -9,6 +9,7 @@ import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query
 import { ConvexProvider } from "convex/react";
 import { ConvexError } from "convex/values";
 import { toast } from "sonner";
+
 import { TooltipProvider } from "./components/ui/tooltip";
 import { env } from "./env";
 import { routeTree } from "./routeTree.gen";

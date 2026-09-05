@@ -1,5 +1,6 @@
 import { Check, X } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
+
 import ColorWheel from "@/assets/color-wheel.svg";
 import { colors, type PinColor } from "@/colors";
 import { Button } from "@/components/ui/button";

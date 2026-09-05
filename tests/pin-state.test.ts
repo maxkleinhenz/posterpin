@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
+
+import { getPinStatus, normalizePinColor } from "../shared/pins";
 import { colors } from "../src/colors";
 import { defaultFilter, useAppStore } from "../src/store/app-store";
-import { getPinStatus, normalizePinColor } from "../shared/pins";
 
 afterEach(() =>
 	useAppStore.setState({

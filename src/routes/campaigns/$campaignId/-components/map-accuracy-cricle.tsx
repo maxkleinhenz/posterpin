@@ -9,6 +9,7 @@ import {
 	Source,
 } from "react-map-gl/maplibre";
 import { useShallow } from "zustand/react/shallow";
+
 import type { GeolocationState } from "@/lib/use-geolocation";
 import { useAppStore } from "@/store/app-store";
 

@@ -1,15 +1,16 @@
+import { useIsMutating, useSuspenseQuery } from "@tanstack/react-query";
+
+import "maplibre-gl/dist/maplibre-gl.css";
 import {
 	ClientOnly,
 	createFileRoute,
 	notFound,
 	useNavigate,
 } from "@tanstack/react-router";
-import "maplibre-gl/dist/maplibre-gl.css";
-import { useIsMutating, useSuspenseQuery } from "@tanstack/react-query";
 import type { Id } from "convex/_generated/dataModel";
 import type { Campaign } from "convex/schema";
 import { ArrowLeft } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import MapLibre, {
 	type LngLatLike,
 	type MapLayerMouseEvent,
@@ -18,6 +19,7 @@ import MapLibre, {
 	Marker,
 } from "react-map-gl/maplibre";
 import { useShallow } from "zustand/react/shallow";
+
 import { Button } from "@/components/ui/button";
 import {
 	Tooltip,
@@ -32,7 +34,8 @@ import {
 	useAddPlannedPinMutation,
 	useUpdatePinPositionMutation,
 } from "@/queries/pins";
-import { useAppStore } from "@/store/app-store";
+import { type Mode, useAppStore } from "@/store/app-store";
+
 import AccuracyCricle from "./-components/map-accuracy-cricle";
 import MapControls from "./-components/map-control";
 import MenuSheet from "./-components/menu-sheet";
@@ -115,7 +118,10 @@ type DraggingPin = { id: string; latitude: number; longitude: number };
 function MapComponent({ campaign }: { campaign: Campaign }) {
 	const navigate = useNavigate();
 
-	const [cursor, setCursor] = useState<string>("grab");
+	const [hoverCursor, setHoverCursor] = useState<{
+		mode: Mode;
+		cursor: string;
+	} | null>(null);
 	const [draggingPin, setDraggingPin] = useState<DraggingPin | null>(null);
 	const wasDraggedRef = useRef(false);
 	const dragStartPointRef = useRef<ScreenPoint | null>(null);
@@ -139,9 +145,13 @@ function MapComponent({ campaign }: { campaign: Campaign }) {
 		autoStart: true,
 	});
 
-	useEffect(() => {
-		setCursor(mode.mode === "planning" ? "crosshair" : "grab");
-	}, [mode.mode]);
+	const cursor = draggingPin
+		? "grabbing"
+		: hoverCursor?.mode === mode
+			? hoverCursor.cursor
+			: mode.mode === "planning"
+				? "crosshair"
+				: "grab";
 
 	async function onMapClick(e: MapLayerMouseEvent) {
 		if (wasDraggedRef.current) {
@@ -219,7 +229,7 @@ function MapComponent({ campaign }: { campaign: Campaign }) {
 			latitude: coords[1],
 		});
 		e.target.dragPan.disable();
-		setCursor("grabbing");
+		setHoverCursor(null);
 	}
 
 	function onDragMove(e: MapLayerMouseEvent | MapLayerTouchEvent) {
@@ -259,22 +269,23 @@ function MapComponent({ campaign }: { campaign: Campaign }) {
 		dragStartPointRef.current = null;
 		setDraggingPin(null);
 		e.target.dragPan.enable();
-		setCursor(mode.mode === "planning" ? "crosshair" : "grab");
+		setHoverCursor(null);
 	}
 
 	function onMouseEnter(e: MapLayerMouseEvent) {
 		if (draggingPin) return;
 		const feature = e.features?.[0];
 		if (interactiveLayerIds.some((layerId) => layerId === feature?.layer.id)) {
-			setCursor(
-				feature?.layer?.id === pinsPlannedLayer.id ? "grab" : "pointer",
-			);
+			setHoverCursor({
+				mode,
+				cursor: feature?.layer?.id === pinsPlannedLayer.id ? "grab" : "pointer",
+			});
 		}
 	}
 
 	function onMouseLeave() {
 		if (draggingPin) return;
-		setCursor(mode.mode === "planning" ? "crosshair" : "grab");
+		setHoverCursor(null);
 	}
 
 	const hasLocation = hasFreshLocation(geolocation);

@@ -1,7 +1,6 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ScrollArea as ScrollAreaPrimitive } from "radix-ui";
 import * as React from "react";
-
 import { cn } from "src/lib/utils";
 
 const ScrollArea = React.forwardRef<
@@ -98,8 +97,12 @@ function VirtualScrollArea<T extends object>({
 		React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root>,
 		"children"
 	>) {
+	"use no memo";
+	// Remove when TanStack Virtual supports React Compiler memoization.
 	const parentRef = React.useRef<HTMLDivElement>(null);
 
+	// This component opts out of compilation above; keep virtualizer reads local.
+	// oxlint-disable-next-line react/incompatible-library
 	const rowVirtualizer = useVirtualizer({
 		count: items.length,
 		getScrollElement: () => parentRef.current,

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+
 import type { UseGeolocationResult } from "../src/lib/use-geolocation";
 
 const map = vi.hoisted(() => ({
@@ -14,8 +15,8 @@ vi.mock("react-map-gl/maplibre", () => ({ useMap: () => ({ current: map }) }));
 vi.mock("../src/routes/campaigns/$campaignId/-components/pin-settings", () => ({
 	default: () => null,
 }));
-import MapControls from "../src/routes/campaigns/$campaignId/-components/map-control";
 import { TooltipProvider } from "../src/components/ui/tooltip";
+import MapControls from "../src/routes/campaigns/$campaignId/-components/map-control";
 
 beforeEach(() => vi.clearAllMocks());
 afterEach(cleanup);

@@ -102,9 +102,9 @@ vi.mock(
 	() => ({ default: () => null }),
 );
 
+import { TooltipProvider } from "../src/components/ui/tooltip";
 import { Route } from "../src/routes/campaigns/$campaignId/index";
 import { defaultFilter, useAppStore } from "../src/store/app-store";
-import { TooltipProvider } from "../src/components/ui/tooltip";
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -180,6 +180,22 @@ it("moves a planned pin using touch and restores map panning", () => {
 	});
 	expect(state.map.dragPan.disable).toHaveBeenCalled();
 	expect(state.map.dragPan.enable).toHaveBeenCalled();
+});
+
+it("updates the cursor for mode changes, hover, and dragging", () => {
+	show();
+	expect(state.props.cursor).toBe("grab");
+	act(() => useAppStore.getState().setMode({ mode: "planning" }));
+	expect(state.props.cursor).toBe("crosshair");
+	fire("onMouseEnter", event("mouseenter"));
+	expect(state.props.cursor).toBe("grab");
+	act(() => useAppStore.getState().setMode({ mode: "none" }));
+	act(() => useAppStore.getState().setMode({ mode: "planning" }));
+	expect(state.props.cursor).toBe("crosshair");
+	fire("onMouseDown", event("mousedown"));
+	expect(state.props.cursor).toBe("grabbing");
+	fire("onMouseUp", event("mouseup"));
+	expect(state.props.cursor).toBe("crosshair");
 });
 
 it("cancels interrupted touch drags without writing coordinates", () => {

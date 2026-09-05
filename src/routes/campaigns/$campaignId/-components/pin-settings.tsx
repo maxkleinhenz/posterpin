@@ -2,6 +2,7 @@ import { useMediaQuery } from "@uidotdev/usehooks";
 import { Check, MapIcon, SlidersHorizontal } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
+
 import { colors, type PinColor } from "@/colors";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";

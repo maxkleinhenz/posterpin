@@ -4,6 +4,7 @@
 	"printWidth": 80,
 	"semi": true,
 	"singleQuote": false,
+	"sortImports": true,
 	"trailingComma": "all",
 	"ignorePatterns": [
 		"src/routeTree.gen.ts",

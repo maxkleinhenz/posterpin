@@ -59,14 +59,16 @@ export function useGeolocation(
 	const supported = typeof window !== "undefined" && "geolocation" in navigator;
 	const [state, setState] = useState<GeolocationState>({
 		...initialState,
-		loading: supported,
+		loading: supported && !!options?.autoStart,
 	});
 	const [isWatching, setIsWatching] = useState(false);
 	const watchIdRef = useRef<number | null>(null);
 	const watchGenerationRef = useRef(0);
 	const refreshedForRef = useRef<number | null>(null);
 	const optionsRef = useRef(options);
-	optionsRef.current = options;
+	useEffect(() => {
+		optionsRef.current = options;
+	}, [options]);
 
 	const stopWatching = useCallback(() => {
 		if (!supported) return;
@@ -127,7 +129,6 @@ export function useGeolocation(
 
 	useEffect(() => {
 		if (!supported || !options?.autoStart) {
-			setState((previous) => ({ ...previous, loading: false }));
 			return stopWatching;
 		}
 

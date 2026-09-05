@@ -3,6 +3,7 @@ import { useMutation, useMutationState } from "@tanstack/react-query";
 import type { OptimisticLocalStore } from "convex/browser";
 import { useMutation as useConvexMutation } from "convex/react";
 import type { Pin } from "convex/schema";
+
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 
@@ -64,17 +65,31 @@ export function usePendingPinStatusIds() {
 
 // The server stamps the authoritative time; the local clock only fills the gap
 // until the real value arrives, so a skewed device cannot persist a bad one.
+// Convex invokes these callbacks when mutating/replaying, never during render.
+function optimisticallyTakeDownPin(
+	store: OptimisticLocalStore,
+	{ id }: { id: Id<"pins"> },
+) {
+	updateCachedPin(store, id, { tookDownAt: Date.now() });
+}
+
+function optimisticallyHangAgainPin(
+	store: OptimisticLocalStore,
+	{ id }: { id: Id<"pins"> },
+) {
+	updateCachedPin(store, id, { hangAt: Date.now(), tookDownAt: null });
+}
+
 export function useTakeDownPinMutation() {
 	const mutationFn = useConvexMutation(api.pins.takeDown).withOptimisticUpdate(
-		(store, { id }) => updateCachedPin(store, id, { tookDownAt: Date.now() }),
+		optimisticallyTakeDownPin,
 	);
 	return useMutation({ mutationKey: pinStatusMutationKey, mutationFn });
 }
 
 export function useHangAgainPinMutation() {
 	const mutationFn = useConvexMutation(api.pins.hangAgain).withOptimisticUpdate(
-		(store, { id }) =>
-			updateCachedPin(store, id, { hangAt: Date.now(), tookDownAt: null }),
+		optimisticallyHangAgainPin,
 	);
 	return useMutation({ mutationKey: pinStatusMutationKey, mutationFn });
 }

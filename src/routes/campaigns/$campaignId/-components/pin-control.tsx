@@ -2,15 +2,16 @@ import { useIsMutating } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
 import type { Id } from "convex/_generated/dataModel";
 import { LocateOff } from "lucide-react";
-import { useMap } from "react-map-gl/maplibre";
 import { useShallow } from "zustand/react/shallow";
+
 import { colors } from "@/colors";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { AddPin } from "@/icons";
 import { type GeolocationState, hasFreshLocation } from "@/lib/use-geolocation";
-import { useAddPinMutation, useAddPlannedPinMutation } from "@/queries/pins";
+import { useAddPinMutation } from "@/queries/pins";
 import { useAppStore } from "@/store/app-store";
+
 import PinColorPopover from "./pin-color-popover";
 
 export default function PinControl({
@@ -21,9 +22,7 @@ export default function PinControl({
 	geolocation: GeolocationState;
 }) {
 	const { campaignId } = useParams({ from: "/campaigns/$campaignId/" });
-	const { current: map } = useMap();
 	const addPin = useAddPinMutation();
-	const addPlannedPin = useAddPlannedPinMutation();
 	const pendingPlans = useIsMutating({ mutationKey: ["add-planned-pin"] });
 	const { mode, setMode, pinColor, setPinColor, pinFilter } = useAppStore(
 		useShallow((state) => ({
@@ -44,23 +43,8 @@ export default function PinControl({
 						? "Bitte geplante Plakate und eine Farbe in den Einstellungen einblenden."
 						: pendingPlans
 							? "Plakat wird gespeichert…"
-							: "Tippe auf die Karte oder verschiebe sie mit den Pfeiltasten und plane ein Plakat in der Kartenmitte."}
+							: "Klicke oder tippe auf die Karte, um ein Plakat zu planen."}
 				</output>
-				<Button
-					disabled={!canPlan || pendingPlans > 0 || !map}
-					onClick={() => {
-						if (!map || !canPlan || pendingPlans) return;
-						const center = map.getCenter();
-						addPlannedPin.mutate({
-							campaignId: campaignId as Id<"campaigns">,
-							longitude: center.lng,
-							latitude: center.lat,
-							color: pinColor,
-						});
-					}}
-				>
-					In Kartenmitte planen
-				</Button>
 				<Button variant="outline" onClick={() => setMode({ mode: "none" })}>
 					Beenden
 				</Button>

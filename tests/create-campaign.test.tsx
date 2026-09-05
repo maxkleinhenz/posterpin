@@ -28,8 +28,8 @@ vi.mock("@/components/ui/calendar", () => ({
 		</button>
 	),
 }));
-import CreateCampaign from "../src/routes/-components/create-campaign";
 import { TooltipProvider } from "../src/components/ui/tooltip";
+import CreateCampaign from "../src/routes/-components/create-campaign";
 
 beforeEach(() => mutateAsync.mockReset().mockResolvedValue("campaign-id"));
 afterEach(cleanup);

@@ -2,11 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
 import type { Id } from "convex/_generated/dataModel";
 import type { ExpressionSpecification } from "maplibre-gl";
-import { colors, type PinColor } from "@/colors";
-import { pinQueries } from "@/queries/pins";
-import { useAppStore } from "@/store/app-store";
-import { getPinStatus, normalizePinColor } from "../../../../../shared/pins";
-import "maplibre-gl/dist/maplibre-gl.css";
 import { useEffect, useMemo } from "react";
 import {
 	type GeoJSONSourceSpecification,
@@ -16,6 +11,14 @@ import {
 	useMap,
 } from "react-map-gl/maplibre";
 import { useShallow } from "zustand/react/shallow";
+
+import { colors, type PinColor } from "@/colors";
+
+import "maplibre-gl/dist/maplibre-gl.css";
+import { pinQueries } from "@/queries/pins";
+import { useAppStore } from "@/store/app-store";
+
+import { getPinStatus, normalizePinColor } from "../../../../../shared/pins";
 
 function createPinPatternImage(
 	color: string,

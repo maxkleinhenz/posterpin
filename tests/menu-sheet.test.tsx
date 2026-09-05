@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 // @vitest-environment jsdom
 import {
 	act,
@@ -8,9 +9,9 @@ import {
 	waitFor,
 	within,
 } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+
 import type { Id } from "../convex/_generated/dataModel";
 import type { Campaign, Pin } from "../convex/schema";
 

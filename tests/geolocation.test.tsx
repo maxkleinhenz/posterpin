@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import {
 	hasFreshLocation,
 	MAX_LOCATION_AGE_MS,
@@ -133,8 +134,24 @@ describe("GPS freshness", () => {
 
 	it("cleans up watches started manually", () => {
 		const { result, unmount } = renderHook(() => useGeolocation());
+		expect(result.current.loading).toBe(false);
 		act(() => result.current.startWatching());
 		unmount();
 		expect(clearWatch).toHaveBeenCalledWith(7);
+	});
+
+	it("uses updated options on the next watch without restarting an active one", () => {
+		const { result, rerender } = renderHook(
+			({ timeout }) => useGeolocation({ autoStart: true, timeout }),
+			{ initialProps: { timeout: 1000 } },
+		);
+		rerender({ timeout: 5000 });
+		expect(navigator.geolocation.watchPosition).toHaveBeenCalledTimes(1);
+		act(() => result.current.refreshLocation());
+		expect(navigator.geolocation.watchPosition).toHaveBeenLastCalledWith(
+			expect.any(Function),
+			expect.any(Function),
+			expect.objectContaining({ timeout: 5000, maximumAge: 0 }),
+		);
 	});
 });
