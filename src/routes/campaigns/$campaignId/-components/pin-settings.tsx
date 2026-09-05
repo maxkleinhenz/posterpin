@@ -162,7 +162,7 @@ export default function PinSettingsPopup() {
 							<ItemTitle>Karte</ItemTitle>
 						</div>
 						<fieldset className="min-w-0 mb-2">
-							<div className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] gap-2">
+							<div className="grid grid-cols-[repeat(auto-fill,minmax(90px,1fr))] gap-2">
 								{mapStyles.map((style) => (
 									<label key={style.id} className="relative cursor-pointer">
 										<input

@@ -2,13 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
 import type { Id } from "convex/_generated/dataModel";
 import type { ExpressionSpecification } from "maplibre-gl";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import {
 	type GeoJSONSourceSpecification,
 	Layer,
 	type LayerProps,
 	Source,
-	useMap,
 } from "react-map-gl/maplibre";
 import { useShallow } from "zustand/react/shallow";
 
@@ -19,73 +18,6 @@ import { pinQueries } from "@/queries/pins";
 import { useAppStore } from "@/store/app-store";
 
 import { getPinStatus, normalizePinColor } from "../../../../../shared/pins";
-
-function createPinPatternImage(
-	color: string,
-	pattern: "stripes" | "crosshatch",
-): { width: number; height: number; data: Uint8Array } {
-	const size = 40;
-	const canvas = document.createElement("canvas");
-	canvas.width = size;
-	canvas.height = size;
-	const ctx = canvas.getContext("2d");
-	if (!ctx)
-		return { width: size, height: size, data: new Uint8Array(size * size * 4) };
-	const cx = size / 2;
-	const cy = size / 2;
-	const r = size / 2 - 2;
-
-	ctx.beginPath();
-	ctx.arc(cx, cy, r, 0, Math.PI * 2);
-	ctx.fillStyle = color;
-	ctx.globalAlpha = pattern === "crosshatch" ? 0.5 : 0.65;
-	ctx.fill();
-	ctx.globalAlpha = 1;
-
-	ctx.save();
-	ctx.beginPath();
-	ctx.arc(cx, cy, r, 0, Math.PI * 2);
-	ctx.clip();
-
-	if (pattern === "stripes") {
-		ctx.strokeStyle = "rgba(255,255,255,0.65)";
-		ctx.lineWidth = 3;
-		for (let i = -size; i < size * 2; i += 14) {
-			ctx.beginPath();
-			ctx.moveTo(i, 0);
-			ctx.lineTo(i + size, size);
-			ctx.stroke();
-		}
-	} else {
-		ctx.strokeStyle = "rgba(0,0,0,0.3)";
-		ctx.lineWidth = 1.5;
-		for (let i = -size; i < size * 2; i += 12) {
-			ctx.beginPath();
-			ctx.moveTo(i, 0);
-			ctx.lineTo(i + size, size);
-			ctx.stroke();
-			ctx.beginPath();
-			ctx.moveTo(size - i, 0);
-			ctx.lineTo(-i, size);
-			ctx.stroke();
-		}
-	}
-
-	ctx.restore();
-
-	ctx.beginPath();
-	ctx.arc(cx, cy, r, 0, Math.PI * 2);
-	ctx.strokeStyle = pattern === "crosshatch" ? "#888888" : "#ffffff";
-	ctx.lineWidth = 3;
-	ctx.stroke();
-
-	const imageData = ctx.getImageData(0, 0, size, size);
-	return {
-		width: size,
-		height: size,
-		data: new Uint8Array(imageData.data.buffer),
-	};
-}
 
 export const hungSourceId = "pins-source-hung";
 export const tookDownSourceId = "pins-source-took-down";
@@ -184,17 +116,19 @@ export const pinsUnclusteredPointLayer = {
 
 export const tookDownClusterLayer = {
 	id: "pins-cluster-took-down",
-	type: "symbol",
+	type: "circle",
 	filter: ["has", "point_count"],
-	layout: {
-		"icon-image": [
-			"concat",
-			"pin-tookdown-",
-			createDominantColorExpression((color) => color, "yellow"),
-		],
-		"icon-size": ["step", ["get", "point_count"], 1.25, 100, 1.75, 750, 2.25],
-		"icon-allow-overlap": true,
-		"icon-ignore-placement": true,
+	paint: {
+		"circle-radius": ["step", ["get", "point_count"], 20, 100, 30, 750, 40],
+		"circle-color": createDominantColorExpression(
+			(color) => colors[color].rgb,
+			colors.yellow.rgb,
+		),
+		// Clusters stay a little more solid than single pins so the count reads.
+		"circle-opacity": 0.55,
+		"circle-stroke-width": 2,
+		"circle-stroke-color": "#ffffff",
+		"circle-stroke-opacity": 0.7,
 	},
 } as const satisfies LayerProps;
 
@@ -207,42 +141,44 @@ const tookDownClusterCountLayer = {
 		"text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
 		"text-size": 16,
 	},
+	// The faded fill takes on the basemap underneath, so the halo carries contrast.
 	paint: {
-		"text-color": createDominantColorExpression(
-			(color) =>
-				colors[getPinColorKey(color)].text === "text-black"
-					? "#000000"
-					: "#ffffff",
-			"#000000",
-		),
+		"text-color": "#000000",
+		"text-halo-color": "#ffffff",
+		"text-halo-width": 1.5,
 	},
 } as const satisfies LayerProps;
 
 export const pinsTookDownLayer = {
 	id: "pins-layer-took-down",
-	type: "symbol",
+	type: "circle",
 	filter: ["!", ["has", "point_count"]],
-	layout: {
-		"icon-image": ["concat", "pin-tookdown-", ["get", "colorKey"]],
-		"icon-size": 1,
-		"icon-allow-overlap": true,
-		"icon-ignore-placement": true,
+	paint: {
+		"circle-radius": 10,
+		"circle-color": ["coalesce", ["get", "colorRgb"], colors.yellow.rgb],
+		"circle-opacity": 0.4,
+		"circle-stroke-width": 1.5,
+		"circle-stroke-color": "#ffffff",
+		"circle-stroke-opacity": 0.7,
 	},
 } as const satisfies LayerProps;
 
 export const plannedClusterLayer = {
 	id: "pins-cluster-planned",
-	type: "symbol",
+	type: "circle",
 	filter: ["has", "point_count"],
-	layout: {
-		"icon-image": [
-			"concat",
-			"pin-planned-",
-			createDominantColorExpression((color) => color, "yellow"),
-		],
-		"icon-size": ["step", ["get", "point_count"], 1.25, 100, 1.75, 750, 2.25],
-		"icon-allow-overlap": true,
-		"icon-ignore-placement": true,
+	paint: {
+		"circle-radius": ["step", ["get", "point_count"], 20, 100, 30, 750, 40],
+		"circle-color": createDominantColorExpression(
+			(color) => colors[color].rgb,
+			colors.yellow.rgb,
+		),
+		"circle-opacity": 0.18,
+		"circle-stroke-width": 4,
+		"circle-stroke-color": createDominantColorExpression(
+			(color) => colors[color].rgb,
+			colors.yellow.rgb,
+		),
 	},
 } as const satisfies LayerProps;
 
@@ -255,26 +191,26 @@ const plannedClusterCountLayer = {
 		"text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
 		"text-size": 16,
 	},
+	// The wash is sheer, so the halo rather than the fill carries the contrast.
 	paint: {
-		"text-color": createDominantColorExpression(
-			(color) =>
-				colors[getPinColorKey(color)].text === "text-black"
-					? "#000000"
-					: "#ffffff",
-			"#000000",
-		),
+		"text-color": "#000000",
+		"text-halo-color": "#ffffff",
+		"text-halo-width": 1.5,
 	},
 } as const satisfies LayerProps;
 
 export const pinsPlannedLayer = {
 	id: "pins-layer-planned",
-	type: "symbol",
+	type: "circle",
 	filter: ["!", ["has", "point_count"]],
-	layout: {
-		"icon-image": ["concat", "pin-planned-", ["get", "colorKey"]],
-		"icon-size": 1,
-		"icon-allow-overlap": true,
-		"icon-ignore-placement": true,
+	paint: {
+		"circle-radius": 11,
+		// A wash of the pin color keeps the hue readable where a bare ring would
+		// disappear, without filling the marker in the way a hung pin is.
+		"circle-color": ["coalesce", ["get", "colorRgb"], colors.yellow.rgb],
+		"circle-opacity": 0.18,
+		"circle-stroke-width": 3,
+		"circle-stroke-color": ["coalesce", ["get", "colorRgb"], colors.yellow.rgb],
 	},
 } as const satisfies LayerProps;
 
@@ -323,31 +259,6 @@ export default function PinsLayer({
 	draggingPin?: DraggingPin | null;
 }) {
 	const { campaignId } = useParams({ from: "/campaigns/$campaignId/" });
-	const maps = useMap();
-
-	useEffect(() => {
-		const map = Object.values(maps)[0];
-		if (!map) return;
-		const addPinImages = () => {
-			for (const color of pinColors) {
-				const rgb = colors[color].rgb;
-				const plannedId = `pin-planned-${color}`;
-				if (!map.hasImage(plannedId)) {
-					map.addImage(plannedId, createPinPatternImage(rgb, "stripes"));
-				}
-				const tookDownId = `pin-tookdown-${color}`;
-				if (!map.hasImage(tookDownId)) {
-					map.addImage(tookDownId, createPinPatternImage(rgb, "crosshatch"));
-				}
-			}
-		};
-		addPinImages();
-		// Replacing the base style can discard the custom marker images.
-		map.on("style.load", addPinImages);
-		return () => {
-			map.off("style.load", addPinImages);
-		};
-	}, [maps]);
 
 	const pins = useQuery(pinQueries.list(campaignId as Id<"campaigns">));
 
