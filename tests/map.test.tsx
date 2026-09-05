@@ -58,6 +58,7 @@ vi.mock("@/queries/pins", () => ({
 	}),
 }));
 vi.mock("@/env", () => ({ env: { VITE_MAPTILER_KEY: "test" } }));
+vi.mock("@/hooks/use-mobile", () => ({ useIsMobile: () => false }));
 vi.mock("@uidotdev/usehooks", () => ({ useMediaQuery: () => false }));
 vi.mock("@/lib/use-geolocation", () => ({
 	useGeolocation: () => ({
@@ -75,6 +76,7 @@ vi.mock("react-map-gl/maplibre", () => ({
 	},
 	MapProvider: ({ children }: PropsWithChildren) => children,
 	Marker: () => null,
+	useMap: () => ({}),
 }));
 vi.mock("../src/routes/campaigns/$campaignId/-components/pin-layer", () => ({
 	default: () => null,
@@ -110,12 +112,21 @@ vi.mock(
 );
 
 import { TooltipProvider } from "../src/components/ui/tooltip";
+import { MapSheetLayout } from "../src/routes/campaigns/$campaignId/-components/map-sheet-layout";
 import PinSettingsPopup from "../src/routes/campaigns/$campaignId/-components/pin-settings";
 import { Route } from "../src/routes/campaigns/$campaignId/index";
 import { defaultFilter, useAppStore } from "../src/store/app-store";
 import { useMapSettings } from "../src/store/map-settings";
 
 beforeEach(() => {
+	vi.stubGlobal(
+		"ResizeObserver",
+		class {
+			observe() {}
+			unobserve() {}
+			disconnect() {}
+		},
+	);
 	vi.clearAllMocks();
 	state.pending = 0;
 	state.rendered = [];
@@ -126,7 +137,10 @@ beforeEach(() => {
 		pinColor: "yellow",
 	});
 });
-afterEach(cleanup);
+afterEach(() => {
+	cleanup();
+	vi.unstubAllGlobals();
+});
 function show() {
 	const Component = Route.options.component as ComponentType;
 	render(
@@ -140,7 +154,9 @@ it("switches the map from settings, saves the selection, and resets to streets",
 	show();
 	render(
 		<TooltipProvider>
-			<PinSettingsPopup />
+			<MapSheetLayout>
+				<PinSettingsPopup />
+			</MapSheetLayout>
 		</TooltipProvider>,
 	);
 	fireEvent.click(screen.getByRole("button", { name: "Einstellungen" }));

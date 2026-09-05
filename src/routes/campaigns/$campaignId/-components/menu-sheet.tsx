@@ -11,14 +11,6 @@ import { colors } from "@/colors";
 import { Button } from "@/components/ui/button";
 import { VirtualScrollArea } from "@/components/ui/scroll-area";
 import {
-	Sheet,
-	SheetContent,
-	SheetDescription,
-	SheetHeader,
-	SheetTitle,
-	SheetTrigger,
-} from "@/components/ui/sheet";
-import {
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
@@ -41,6 +33,7 @@ import {
 import { useAppStore } from "@/store/app-store";
 
 import { getPinStatus, normalizePinColor } from "../../../../../shared/pins";
+import { MapPanel } from "./map-panel";
 
 export default function MenuSheet({ campaign }: { campaign: Campaign }) {
 	const maps = useMap();
@@ -82,7 +75,7 @@ export default function MenuSheet({ campaign }: { campaign: Campaign }) {
 			: {
 					top: 0,
 					bottom: 0,
-					left: 384, // width of the SheetContent w-96
+					left: 0,
 					right: 0,
 				};
 
@@ -94,177 +87,159 @@ export default function MenuSheet({ campaign }: { campaign: Campaign }) {
 	}
 
 	return (
-		<div className="grid gap-2">
-			<Sheet
-				modal={false}
-				open={open}
-				onOpenChange={(o) => {
-					if (!o) setMode({ mode: "none" });
-					setOpen(o);
-				}}
-			>
-				<Tooltip>
-					<TooltipTrigger asChild>
-						{/* Menu */}
-						<SheetTrigger asChild>
-							<Button
-								className="p-5"
-								variant="ghost"
-								size="icon-lg"
-								onClick={() => {
-									setMode({ mode: "menu" });
-								}}
-							>
-								<Menu className="size-5" />
-								<span className="sr-only">Menü</span>
-							</Button>
-						</SheetTrigger>
-					</TooltipTrigger>
-					<TooltipContent className="px-2 py-1 text-xs" side="top">
-						Menü
-					</TooltipContent>
-				</Tooltip>
-				<SheetContent
-					className="rounded-t-md w-full md:w-96 h-[70dvh] md:h-dvh"
-					side={isSmallDevice ? "bottom" : "left"}
+		<MapPanel
+			side="left"
+			open={open}
+			onOpenChange={(nextOpen) => {
+				if (!nextOpen && useAppStore.getState().mode.mode === "menu") {
+					setMode({ mode: "none" });
+				}
+				setOpen(nextOpen);
+			}}
+			title={campaign.name}
+			description={<>Insgesamt {pins.length} Plakate</>}
+			label="Menü"
+			mobileClassName="rounded-t-md w-full h-[70dvh]"
+			trigger={
+				<Button
+					className="p-5"
+					variant="ghost"
+					size="icon-lg"
+					onClick={() => {
+						if (!open) setMode({ mode: "menu" });
+					}}
 				>
-					<div className="grid grid-rows-[auto_1fr] gap-2 overflow-hidden h-full">
-						<SheetHeader>
-							<SheetTitle>{campaign.name}</SheetTitle>
-							<SheetDescription>
-								Insgesamt {pins.length} Plakate
-							</SheetDescription>
-						</SheetHeader>
+					<Menu className="size-5" />
+					<span className="sr-only">Menü</span>
+				</Button>
+			}
+		>
+			<VirtualScrollArea
+				className="px-4"
+				items={pins}
+				getItemKey={(index) => pins[index]._id}
+				estimateSize={() => 57}
+				renderItem={(item) => {
+					const pin =
+						item.hangAt == null && item.tookDownAt == null
+							? {
+									icon: <PinMarkerPlanned className="size-5" />,
+									label: "Geplant",
+									muted: true,
+									strike: false,
+									actionIcon: <AddPin />,
+									actionLabel: "Jetzt aufhängen",
+									onAction: () =>
+										hangAgainPinMutation.mutate({
+											id: item._id as Id<"pins">,
+										}),
+								}
+							: item.tookDownAt != null
+								? {
+										icon: <PinMarkerOff className="size-5" />,
+										label: `Abgehangen am ${new Date(
+											item.tookDownAt,
+										).toLocaleString(navigator.language, {
+											dateStyle: "short",
+											timeStyle: "short",
+										})}`,
+										muted: true,
+										strike: true,
+										actionIcon: <AddPin />,
+										actionLabel: "Plakat wieder aufhängen",
+										onAction: () =>
+											hangAgainPinMutation.mutate({
+												id: item._id as Id<"pins">,
+											}),
+									}
+								: {
+										icon: <PinMarker className="size-5" />,
+										label: `Gehangen am ${new Date(
+											item.hangAt ?? "",
+										).toLocaleString(navigator.language, {
+											dateStyle: "short",
+											timeStyle: "short",
+										})}`,
+										muted: false,
+										strike: false,
+										actionIcon: <RemovePin />,
+										actionLabel: "Plakat abhängen",
+										onAction: () =>
+											takeDownPinMutation.mutate({
+												id: item._id as Id<"pins">,
+											}),
+									};
+					return (
+						<div className="grid grid-cols-[6px_1fr_auto] gap-2 rounded-md">
+							<div
+								className={`rounded-full ${colors[normalizePinColor(item.color)].bg}`}
+							/>
+							<div className={pin.muted ? "text-muted-foreground" : ""}>
+								<div className="flex gap-1 items-center">
+									{pin.icon}
+									<button
+										type="button"
+										onClick={() => {
+											if (isSmallDevice) setOpen(false);
+											setMode({
+												mode: "focused-pin",
+												focusedPin: { id: item._id },
+											});
+										}}
+										className={`underline focus-visible:outline-2 line-clamp-1 text-sm leading-snug font-medium underline-offset-4${pin.strike ? " line-through" : ""}`}
+									>
+										Plakatdetails
+									</button>
+								</div>
+								<p
+									className={`line-clamp-2 text-left text-sm leading-normal font-normal${pin.muted ? "" : " text-muted-foreground"}`}
+								>
+									{pin.label}
+								</p>
+							</div>
 
-						<VirtualScrollArea
-							className="px-4"
-							items={pins}
-							getItemKey={(index) => pins[index]._id}
-							estimateSize={() => 57}
-							renderItem={(item) => {
-								const pin =
-									item.hangAt == null && item.tookDownAt == null
-										? {
-												icon: <PinMarkerPlanned className="size-5" />,
-												label: "Geplant",
-												muted: true,
-												strike: false,
-												actionIcon: <AddPin />,
-												actionLabel: "Jetzt aufhängen",
-												onAction: () =>
-													hangAgainPinMutation.mutate({
-														id: item._id as Id<"pins">,
-													}),
+							<div className="inline-flex w-fit -space-x-px rounded-md rtl:space-x-reverse">
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<Button
+											className="rounded-none rounded-l-md shadow-none focus-visible:z-10"
+											variant="outline"
+											onClick={() =>
+												flyToPin({
+													latitude: item.latitude,
+													longitude: item.longitude,
+												})
 											}
-										: item.tookDownAt != null
-											? {
-													icon: <PinMarkerOff className="size-5" />,
-													label: `Abgehangen am ${new Date(
-														item.tookDownAt,
-													).toLocaleString(navigator.language, {
-														dateStyle: "short",
-														timeStyle: "short",
-													})}`,
-													muted: true,
-													strike: true,
-													actionIcon: <AddPin />,
-													actionLabel: "Plakat wieder aufhängen",
-													onAction: () =>
-														hangAgainPinMutation.mutate({
-															id: item._id as Id<"pins">,
-														}),
-												}
-											: {
-													icon: <PinMarker className="size-5" />,
-													label: `Gehangen am ${new Date(
-														item.hangAt ?? "",
-													).toLocaleString(navigator.language, {
-														dateStyle: "short",
-														timeStyle: "short",
-													})}`,
-													muted: false,
-													strike: false,
-													actionIcon: <RemovePin />,
-													actionLabel: "Plakat abhängen",
-													onAction: () =>
-														takeDownPinMutation.mutate({
-															id: item._id as Id<"pins">,
-														}),
-												};
-								return (
-									<div className="grid grid-cols-[6px_1fr_auto] gap-2 rounded-md">
-										<div
-											className={`rounded-full ${colors[normalizePinColor(item.color)].bg}`}
-										/>
-										<div className={pin.muted ? "text-muted-foreground" : ""}>
-											<div className="flex gap-1 items-center">
-												{pin.icon}
-												<button
-													type="button"
-													onClick={() => {
-														setOpen(false);
-														setMode({
-															mode: "focused-pin",
-															focusedPin: { id: item._id },
-														});
-													}}
-													className={`underline focus-visible:outline-2 line-clamp-1 text-sm leading-snug font-medium underline-offset-4${pin.strike ? " line-through" : ""}`}
-												>
-													Plakatdetails
-												</button>
-											</div>
-											<p
-												className={`line-clamp-2 text-left text-sm leading-normal font-normal${pin.muted ? "" : " text-muted-foreground"}`}
-											>
-												{pin.label}
-											</p>
-										</div>
-
-										<div className="inline-flex w-fit -space-x-px rounded-md rtl:space-x-reverse">
-											<Tooltip>
-												<TooltipTrigger asChild>
-													<Button
-														className="rounded-none rounded-l-md shadow-none focus-visible:z-10"
-														variant="outline"
-														onClick={() =>
-															flyToPin({
-																latitude: item.latitude,
-																longitude: item.longitude,
-															})
-														}
-													>
-														<Focus />
-														<span className="sr-only">Zentriere Plakat</span>
-													</Button>
-												</TooltipTrigger>
-												<TooltipContent className="px-2 py-1 text-xs">
-													Zentriere Plakat
-												</TooltipContent>
-											</Tooltip>
-											<Tooltip>
-												<TooltipTrigger asChild>
-													<Button
-														className="rounded-none rounded-r-md shadow-none focus-visible:z-10"
-														variant="outline"
-														onClick={pin.onAction}
-														disabled={pendingPinIds.has(item._id)}
-													>
-														{pin.actionIcon}
-														<span className="sr-only">{pin.actionLabel}</span>
-													</Button>
-												</TooltipTrigger>
-												<TooltipContent className="px-2 py-1 text-xs">
-													{pin.actionLabel}
-												</TooltipContent>
-											</Tooltip>
-										</div>
-									</div>
-								);
-							}}
-						/>
-					</div>
-				</SheetContent>
-			</Sheet>
-		</div>
+										>
+											<Focus />
+											<span className="sr-only">Zentriere Plakat</span>
+										</Button>
+									</TooltipTrigger>
+									<TooltipContent className="px-2 py-1 text-xs">
+										Zentriere Plakat
+									</TooltipContent>
+								</Tooltip>
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<Button
+											className="rounded-none rounded-r-md shadow-none focus-visible:z-10"
+											variant="outline"
+											onClick={pin.onAction}
+											disabled={pendingPinIds.has(item._id)}
+										>
+											{pin.actionIcon}
+											<span className="sr-only">{pin.actionLabel}</span>
+										</Button>
+									</TooltipTrigger>
+									<TooltipContent className="px-2 py-1 text-xs">
+										{pin.actionLabel}
+									</TooltipContent>
+								</Tooltip>
+							</div>
+						</div>
+					);
+				}}
+			/>
+		</MapPanel>
 	);
 }

@@ -39,6 +39,7 @@ import { getMapStyleUrl, useMapSettings } from "@/store/map-settings";
 
 import AccuracyCricle from "./-components/map-accuracy-cricle";
 import MapControls from "./-components/map-control";
+import { MapSheetLayout, MapViewport } from "./-components/map-sheet-layout";
 import MenuSheet from "./-components/menu-sheet";
 import PinControl from "./-components/pin-control";
 import PinDetailsSheet from "./-components/pin-details-sheet";
@@ -298,8 +299,8 @@ function MapComponent({ campaign }: { campaign: Campaign }) {
 
 	return (
 		<MapProvider>
-			<div className="h-dvh w-screen relative">
-				<div className="absolute inset-0">
+			<MapSheetLayout>
+				<MapViewport>
 					<MapLibre
 						initialViewState={{
 							...initialCenter,
@@ -340,7 +341,7 @@ function MapComponent({ campaign }: { campaign: Campaign }) {
 						<MapControls geolocation={geolocation} />
 						<PinControl canSetPins={hasLocation} geolocation={geolocation} />
 					</MapLibre>
-				</div>
+				</MapViewport>
 				<div className="absolute top-4 left-4 flex gap-2">
 					<div className="flex items-center gap-2 p-1 bg-background rounded-md shadow-md">
 						<Tooltip>
@@ -367,7 +368,7 @@ function MapComponent({ campaign }: { campaign: Campaign }) {
 					</div>
 				</div>
 				<PinDetailsSheet />
-			</div>
+			</MapSheetLayout>
 		</MapProvider>
 	);
 }
