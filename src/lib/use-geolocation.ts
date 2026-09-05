@@ -18,14 +18,30 @@ export type UseGeolocationResult = GeolocationState & {
 	isWatching: boolean;
 	startWatching: () => void;
 	stopWatching: () => void;
+	refreshLocation: () => void;
 };
 
 type UseGeolocationConfig = {
 	autoStart?: boolean;
 };
 
+export const MAX_LOCATION_AGE_MS = 30_000;
+
+export function hasFreshLocation(location: GeolocationState, now = Date.now()) {
+	return (
+		location.error == null &&
+		location.latitude != null &&
+		location.longitude != null &&
+		Number.isFinite(location.latitude) &&
+		Number.isFinite(location.longitude) &&
+		location.timestamp != null &&
+		now - location.timestamp >= 0 &&
+		now - location.timestamp < MAX_LOCATION_AGE_MS
+	);
+}
+
 const initialState: GeolocationState = {
-	loading: true,
+	loading: false,
 	accuracy: null,
 	altitude: null,
 	altitudeAccuracy: null,
@@ -47,11 +63,14 @@ export function useGeolocation(
 	});
 	const [isWatching, setIsWatching] = useState(false);
 	const watchIdRef = useRef<number | null>(null);
+	const watchGenerationRef = useRef(0);
+	const refreshedForRef = useRef<number | null>(null);
 	const optionsRef = useRef(options);
 	optionsRef.current = options;
 
 	const stopWatching = useCallback(() => {
 		if (!supported) return;
+		watchGenerationRef.current += 1;
 
 		if (watchIdRef.current !== null) {
 			navigator.geolocation.clearWatch(watchIdRef.current);
@@ -62,52 +81,81 @@ export function useGeolocation(
 		setState(initialState);
 	}, [supported]);
 
-	const startWatching = useCallback(() => {
-		if (!supported || watchIdRef.current !== null) return;
+	const startWatching = useCallback(
+		(fresh = false) => {
+			if (!supported || watchIdRef.current !== null) return;
+			const generation = ++watchGenerationRef.current;
 
-		setState((previous) => ({
-			...previous,
-			loading: true,
-			error: null,
-		}));
+			setState((previous) => ({
+				...previous,
+				loading: true,
+				error: null,
+			}));
 
-		watchIdRef.current = navigator.geolocation.watchPosition(
-			(position) => {
-				setState({
-					loading: false,
-					accuracy: position.coords.accuracy,
-					altitude: position.coords.altitude,
-					altitudeAccuracy: position.coords.altitudeAccuracy,
-					heading: position.coords.heading,
-					latitude: position.coords.latitude,
-					longitude: position.coords.longitude,
-					speed: position.coords.speed,
-					timestamp: position.timestamp,
-					error: null,
-				});
-			},
-			(error) => {
-				setState((previous) => ({
-					...previous,
-					loading: false,
-					error,
-				}));
-			},
-			optionsRef.current,
-		);
+			watchIdRef.current = navigator.geolocation.watchPosition(
+				(position) => {
+					if (generation !== watchGenerationRef.current) return;
+					setState({
+						loading: false,
+						accuracy: position.coords.accuracy,
+						altitude: position.coords.altitude,
+						altitudeAccuracy: position.coords.altitudeAccuracy,
+						heading: position.coords.heading,
+						latitude: position.coords.latitude,
+						longitude: position.coords.longitude,
+						speed: position.coords.speed,
+						timestamp: position.timestamp,
+						error: null,
+					});
+				},
+				(error) => {
+					if (generation !== watchGenerationRef.current) return;
+					setState({ ...initialState, error });
+				},
+				{ ...optionsRef.current, ...(fresh ? { maximumAge: 0 } : {}) },
+			);
 
-		setIsWatching(true);
-	}, [supported]);
+			setIsWatching(true);
+		},
+		[supported],
+	);
+
+	const refreshLocation = useCallback(() => {
+		stopWatching();
+		startWatching(true);
+	}, [startWatching, stopWatching]);
 
 	useEffect(() => {
 		if (!supported || !options?.autoStart) {
 			setState((previous) => ({ ...previous, loading: false }));
-			return;
+			return stopWatching;
 		}
 
 		startWatching();
 		return stopWatching;
 	}, [options?.autoStart, startWatching, stopWatching, supported]);
+
+	useEffect(() => {
+		if (state.timestamp == null) return;
+		const timestamp = state.timestamp;
+		// A refresh already ran for this fix or a newer one and the platform still
+		// replayed it. Asking again would only cycle clearWatch/watchPosition on a
+		// zero-length timer and leave the location permanently unusable.
+		if (refreshedForRef.current != null && timestamp <= refreshedForRef.current)
+			return;
+		const expire = () => {
+			// A stationary device may never emit another watch update. Restarting
+			// requests a new fix, bypassing the browser's cached position.
+			if (watchIdRef.current === null) return;
+			refreshedForRef.current = timestamp;
+			refreshLocation();
+		};
+		const timer = window.setTimeout(
+			expire,
+			Math.max(0, timestamp + MAX_LOCATION_AGE_MS - Date.now()),
+		);
+		return () => window.clearTimeout(timer);
+	}, [state.timestamp, refreshLocation]);
 
 	return {
 		...state,
@@ -115,5 +163,6 @@ export function useGeolocation(
 		isWatching,
 		startWatching,
 		stopWatching,
+		refreshLocation,
 	};
 }

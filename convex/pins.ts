@@ -1,5 +1,5 @@
-import { v } from "convex/values";
-import type { Id } from "./_generated/dataModel";
+import { ConvexError, v } from "convex/values";
+import { getPinStatus } from "../shared/pins";
 import { internalMutation, mutation, query } from "./_generated/server";
 import {
 	hangPinAgainSchema,
@@ -7,16 +7,23 @@ import {
 	takePinDownSchema,
 	updatePinColorSchema,
 } from "./schema";
+import { ensureSeedCampaign } from "./seedHelpers";
+import {
+	requireCampaign,
+	requirePin,
+	validateColor,
+	validateCoordinates,
+} from "./validation";
 
 export const seed = internalMutation(async (ctx) => {
-	const allBoards = await ctx.db.query("pins").collect();
-	if (allBoards.length > 0) {
+	const existing = await ctx.db.query("pins").first();
+	if (existing) {
 		return;
 	}
 	await ctx.db.insert("pins", {
 		longitude: 13.726584932188327,
 		latitude: 51.029938550838814,
-		campaignId: "jh7fe4q149a63we6t1sd749dqd81wnmz" as Id<"campaigns">,
+		campaignId: await ensureSeedCampaign(ctx),
 		color: "yellow",
 		hangAt: Date.now(),
 		tookDownAt: null,
@@ -44,6 +51,9 @@ export const list = query({
 export const add = mutation({
 	args: insertPinSchema,
 	handler: async (ctx, args) => {
+		validateCoordinates(args.latitude, args.longitude);
+		validateColor(args.color);
+		await requireCampaign(ctx, args.campaignId);
 		return await ctx.db.insert("pins", {
 			latitude: args.latitude,
 			longitude: args.longitude,
@@ -58,6 +68,9 @@ export const add = mutation({
 export const addPlanned = mutation({
 	args: insertPinSchema,
 	handler: async (ctx, args) => {
+		validateCoordinates(args.latitude, args.longitude);
+		validateColor(args.color);
+		await requireCampaign(ctx, args.campaignId);
 		return await ctx.db.insert("pins", {
 			latitude: args.latitude,
 			longitude: args.longitude,
@@ -72,6 +85,10 @@ export const addPlanned = mutation({
 export const updatePosition = mutation({
 	args: { id: v.id("pins"), latitude: v.number(), longitude: v.number() },
 	handler: async (ctx, { id, latitude, longitude }) => {
+		validateCoordinates(latitude, longitude);
+		const pin = await requirePin(ctx, id);
+		if (getPinStatus(pin) !== "planned")
+			throw new ConvexError("Nur geplante Plakate können verschoben werden.");
 		await ctx.db.patch(id, { latitude, longitude });
 	},
 });
@@ -79,24 +96,37 @@ export const updatePosition = mutation({
 export const remove = mutation({
 	args: { id: v.id("pins") },
 	handler: async (ctx, { id }) => {
+		const pin = await requirePin(ctx, id);
+		if (getPinStatus(pin) !== "planned")
+			throw new ConvexError("Nur geplante Plakate können gelöscht werden.");
 		await ctx.db.delete(id);
 	},
 });
 
 export const takeDown = mutation({
 	args: takePinDownSchema,
-	handler: async (ctx, { id, tookDownAt }) => {
+	handler: async (ctx, { id }) => {
+		const pin = await requirePin(ctx, id);
+		if (getPinStatus(pin) !== "hung")
+			throw new ConvexError(
+				"Das Plakat muss vor dem Abhängen aufgehängt sein.",
+			);
 		await ctx.db.patch(id, {
-			tookDownAt: tookDownAt,
+			tookDownAt: Date.now(),
 		});
 	},
 });
 
 export const hangAgain = mutation({
 	args: hangPinAgainSchema,
-	handler: async (ctx, { id, hangAt }) => {
+	handler: async (ctx, { id }) => {
+		const pin = await requirePin(ctx, id);
+		if (getPinStatus(pin) === "hung")
+			throw new ConvexError(
+				"Das Plakat kann zu diesem Zeitpunkt nicht aufgehängt werden.",
+			);
 		await ctx.db.patch(id, {
-			hangAt: hangAt,
+			hangAt: Date.now(),
 			tookDownAt: null,
 		});
 	},
@@ -105,6 +135,8 @@ export const hangAgain = mutation({
 export const updateColor = mutation({
 	args: updatePinColorSchema,
 	handler: async (ctx, { id, color }) => {
+		validateColor(color);
+		await requirePin(ctx, id);
 		await ctx.db.patch(id, { color });
 	},
 });

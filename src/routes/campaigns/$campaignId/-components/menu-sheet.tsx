@@ -3,7 +3,7 @@ import { useMediaQuery } from "@uidotdev/usehooks";
 import type { Id } from "convex/_generated/dataModel";
 import type { Campaign } from "convex/schema";
 import { Focus, Menu } from "lucide-react";
-import { colors, type PinColor } from "@/colors";
+import { colors } from "@/colors";
 import { Button } from "@/components/ui/button";
 import { VirtualScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -29,9 +29,11 @@ import {
 import {
 	pinQueries,
 	useHangAgainPinMutation,
+	usePendingPinStatusIds,
 	useTakeDownPinMutation,
 } from "@/queries/pins";
 import { useAppStore } from "@/store/app-store";
+import { getPinStatus, normalizePinColor } from "../../../../../shared/pins";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useMemo, useState } from "react";
 import { useMap } from "react-map-gl/maplibre";
@@ -46,6 +48,8 @@ export default function MenuSheet({ campaign }: { campaign: Campaign }) {
 	const hangAgainPinMutation = useHangAgainPinMutation();
 	const isSmallDevice = useMediaQuery("only screen and (max-width : 768px)");
 
+	const pendingPinIds = usePendingPinStatusIds();
+
 	const [open, setOpen] = useState(false);
 	const { setMode, pinFilter } = useAppStore(
 		useShallow((state) => ({
@@ -56,13 +60,12 @@ export default function MenuSheet({ campaign }: { campaign: Campaign }) {
 
 	const pins = useMemo(() => {
 		if (!list.data) return [];
-		return list.data.filter((pin) => {
-			if (!pinFilter.colors[pin.color as PinColor]) return false;
-			if (pin.hangAt === null && pin.tookDownAt === null) return pinFilter.planned;
-			if (pin.tookDownAt !== null) return pinFilter.tookDown;
-			return pinFilter.hung;
-		});
-	}, [list.data, pinFilter.hung, pinFilter.tookDown, pinFilter.planned, pinFilter.colors]);
+		return list.data.filter(
+			(pin) =>
+				pinFilter.colors[normalizePinColor(pin.color)] &&
+				pinFilter[getPinStatus(pin)],
+		);
+	}, [list.data, pinFilter]);
 
 	function flyToPin(pin: { latitude: number; longitude: number }) {
 		if (!map) return;
@@ -133,6 +136,7 @@ export default function MenuSheet({ campaign }: { campaign: Campaign }) {
 						<VirtualScrollArea
 							className="px-4"
 							items={pins}
+							getItemKey={(index) => pins[index]._id}
 							estimateSize={() => 57}
 							renderItem={(item) => {
 								const pin =
@@ -147,7 +151,6 @@ export default function MenuSheet({ campaign }: { campaign: Campaign }) {
 												onAction: () =>
 													hangAgainPinMutation.mutate({
 														id: item._id as Id<"pins">,
-														hangAt: Date.now(),
 													}),
 											}
 										: item.tookDownAt != null
@@ -166,7 +169,6 @@ export default function MenuSheet({ campaign }: { campaign: Campaign }) {
 													onAction: () =>
 														hangAgainPinMutation.mutate({
 															id: item._id as Id<"pins">,
-															hangAt: Date.now(),
 														}),
 												}
 											: {
@@ -184,22 +186,29 @@ export default function MenuSheet({ campaign }: { campaign: Campaign }) {
 													onAction: () =>
 														takeDownPinMutation.mutate({
 															id: item._id as Id<"pins">,
-															tookDownAt: Date.now(),
 														}),
 												};
 								return (
 									<div className="grid grid-cols-[6px_1fr_auto] gap-2 rounded-md">
 										<div
-											className={`rounded-full ${colors[item.color as PinColor].bg}`}
+											className={`rounded-full ${colors[normalizePinColor(item.color)].bg}`}
 										/>
 										<div className={pin.muted ? "text-muted-foreground" : ""}>
 											<div className="flex gap-1 items-center">
 												{pin.icon}
-												<p
-													className={`line-clamp-1 text-sm leading-snug font-medium underline-offset-4${pin.strike ? " line-through" : ""}`}
+												<button
+													type="button"
+													onClick={() => {
+														setOpen(false);
+														setMode({
+															mode: "focused-pin",
+															focusedPin: { id: item._id },
+														});
+													}}
+													className={`underline focus-visible:outline-2 line-clamp-1 text-sm leading-snug font-medium underline-offset-4${pin.strike ? " line-through" : ""}`}
 												>
-													Plakat
-												</p>
+													Plakatdetails
+												</button>
 											</div>
 											<p
 												className={`line-clamp-2 text-left text-sm leading-normal font-normal${pin.muted ? "" : " text-muted-foreground"}`}
@@ -235,6 +244,7 @@ export default function MenuSheet({ campaign }: { campaign: Campaign }) {
 														className="rounded-none rounded-r-md shadow-none focus-visible:z-10"
 														variant="outline"
 														onClick={pin.onAction}
+														disabled={pendingPinIds.has(item._id)}
 													>
 														{pin.actionIcon}
 														<span className="sr-only">{pin.actionLabel}</span>

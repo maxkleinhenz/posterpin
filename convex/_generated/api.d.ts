@@ -11,7 +11,9 @@
 import type * as campaigns from "../campaigns.js";
 import type * as migrations from "../migrations.js";
 import type * as pins from "../pins.js";
+import type * as seedHelpers from "../seedHelpers.js";
 import type * as todos from "../todos.js";
+import type * as validation from "../validation.js";
 
 import type {
   ApiFromModules,
@@ -23,7 +25,9 @@ declare const fullApi: ApiFromModules<{
   campaigns: typeof campaigns;
   migrations: typeof migrations;
   pins: typeof pins;
+  seedHelpers: typeof seedHelpers;
   todos: typeof todos;
+  validation: typeof validation;
 }>;
 
 /**

@@ -56,6 +56,19 @@ pnpm check
 - Run `pnpm dlx convex dev` to start the Convex server.
 
 
+## Seed data and legacy pins
+
+`pnpm dev` seeds a sample pin using a campaign ID from the current database. Repeated seeding does not add duplicate pins.
+
+For old pins whose campaign is missing, choose the destination campaign explicitly before running the migration:
+
+```bash
+pnpm exec convex env set LEGACY_CAMPAIGN_ID '<existing campaign ID>'
+pnpm exec convex run migrations:run '{"fn":"addCampaignIdColumn","cursor":null}'
+```
+
+The migration leaves pins with valid campaign references unchanged and refuses to assign orphaned pins to an arbitrary campaign. It is not run automatically.
+
 ## Shadcn
 
 Add components using the latest version of [Shadcn](https://ui.shadcn.com/).

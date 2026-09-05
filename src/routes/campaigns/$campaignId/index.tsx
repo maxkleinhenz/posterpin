@@ -1,10 +1,11 @@
 import {
 	ClientOnly,
 	createFileRoute,
+	notFound,
 	useNavigate,
 } from "@tanstack/react-router";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useIsMutating, useSuspenseQuery } from "@tanstack/react-query";
 import type { Id } from "convex/_generated/dataModel";
 import type { Campaign } from "convex/schema";
 import { ArrowLeft } from "lucide-react";
@@ -12,11 +13,11 @@ import { useEffect, useRef, useState } from "react";
 import MapLibre, {
 	type LngLatLike,
 	type MapLayerMouseEvent,
+	type MapLayerTouchEvent,
 	MapProvider,
 	Marker,
 } from "react-map-gl/maplibre";
 import { useShallow } from "zustand/react/shallow";
-import type { PinColor } from "@/colors";
 import { Button } from "@/components/ui/button";
 import {
 	Tooltip,
@@ -24,7 +25,7 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { env } from "@/env";
-import { useGeolocation } from "@/lib/use-geolocation";
+import { hasFreshLocation, useGeolocation } from "@/lib/use-geolocation";
 import { campaignsQueries } from "@/queries/campaigns";
 import {
 	pinQueries,
@@ -64,14 +65,35 @@ const interactiveLayerIds = [
 	pinsPlannedLayer.id,
 ] as const;
 
+// A finger never holds perfectly still, so a plain tap reports a few pixels of
+// travel. Below this it stays a tap instead of committing a new pin position.
+const DRAG_THRESHOLD_PX = 8;
+
+type ScreenPoint = { x: number; y: number };
+
+function movedPastThreshold(start: ScreenPoint | null, point: ScreenPoint) {
+	if (!start) return true;
+	return Math.hypot(point.x - start.x, point.y - start.y) >= DRAG_THRESHOLD_PX;
+}
+
+// react-map-gl reuses the features from the last hover for every pointer event,
+// and browsers synthesise a mousemove after each tap. By the next touchstart
+// that array therefore describes the *previous* tap, so query the touch point.
+function featureAt(e: MapLayerMouseEvent | MapLayerTouchEvent) {
+	if (e.type !== "touchstart") return e.features?.[0];
+	const map = e.target;
+	const layers = interactiveLayerIds.filter((id) => map.getLayer(id));
+	return map.queryRenderedFeatures(e.point, { layers })[0];
+}
+
 export const Route = createFileRoute("/campaigns/$campaignId/")({
 	component: RouteComponent,
 	loader: async ({ params, context: { queryClient } }) => {
-		const campaignId = params.campaignId as Id<"campaigns">;
-		await Promise.all([
-			queryClient.ensureQueryData(campaignsQueries.getById(campaignId)),
-			queryClient.ensureQueryData(pinQueries.list(campaignId)),
-		]);
+		const campaign = await queryClient.ensureQueryData(
+			campaignsQueries.getById(params.campaignId),
+		);
+		if (!campaign) throw notFound();
+		await queryClient.ensureQueryData(pinQueries.list(campaign._id));
 	},
 });
 
@@ -79,13 +101,7 @@ function RouteComponent() {
 	const campaignId = Route.useParams().campaignId as Id<"campaigns">;
 	const campaign = useSuspenseQuery(campaignsQueries.getById(campaignId));
 
-	if (campaign.data == null) {
-		return (
-			<div className="h-screen w-screen">
-				<p>Loading</p>
-			</div>
-		);
-	}
+	if (campaign.data == null) throw notFound();
 
 	return (
 		<ClientOnly>
@@ -102,15 +118,18 @@ function MapComponent({ campaign }: { campaign: Campaign }) {
 	const [cursor, setCursor] = useState<string>("grab");
 	const [draggingPin, setDraggingPin] = useState<DraggingPin | null>(null);
 	const wasDraggedRef = useRef(false);
+	const dragStartPointRef = useRef<ScreenPoint | null>(null);
 
-	const { mode, setMode, pinColor } = useAppStore(
+	const { mode, setMode, pinColor, pinFilter } = useAppStore(
 		useShallow((state) => ({
 			mode: state.mode,
 			setMode: state.setMode,
 			pinColor: state.pinColor,
+			pinFilter: state.pinFilter,
 		})),
 	);
 	const addPlannedPinMutation = useAddPlannedPinMutation();
+	const pendingPlans = useIsMutating({ mutationKey: ["add-planned-pin"] });
 	const updatePositionMutation = useUpdatePinPositionMutation();
 
 	const geolocation = useGeolocation({
@@ -152,18 +171,9 @@ function MapComponent({ campaign }: { campaign: Campaign }) {
 			feature?.layer?.id === pinsTookDownLayer.id ||
 			feature?.layer?.id === pinsPlannedLayer.id
 		) {
-			const hangAtRaw = feature.properties?.hangAt;
 			setMode({
 				mode: "focused-pin",
-				focusedPin: {
-					id: feature.properties?.id as string,
-					hangAt: hangAtRaw != null ? new Date(hangAtRaw as number) : null,
-					tookDownAt:
-						feature.properties?.tookDownAt != null
-							? new Date(feature.properties.tookDownAt as number)
-							: null,
-					Color: feature.properties?.colorKey as PinColor,
-				},
+				focusedPin: { id: feature.properties?.id as Id<"pins"> },
 			});
 
 			const bottomPadding = map.getContainer().clientHeight / 4;
@@ -175,7 +185,12 @@ function MapComponent({ campaign }: { campaign: Campaign }) {
 			return;
 		}
 
-		if (mode.mode === "planning") {
+		if (
+			mode.mode === "planning" &&
+			pinFilter.planned &&
+			pinFilter.colors[pinColor] &&
+			pendingPlans === 0
+		) {
 			addPlannedPinMutation.mutate({
 				latitude: e.lngLat.lat,
 				longitude: e.lngLat.lng,
@@ -185,12 +200,19 @@ function MapComponent({ campaign }: { campaign: Campaign }) {
 		}
 	}
 
-	function onMouseDown(e: MapLayerMouseEvent) {
-		const feature = e.features?.[0];
-		if (feature?.layer?.id !== pinsPlannedLayer.id) return;
+	function onDragStart(e: MapLayerMouseEvent | MapLayerTouchEvent) {
+		const feature = featureAt(e);
+		if (
+			feature?.layer?.id !== pinsPlannedLayer.id ||
+			updatePositionMutation.isPending
+		)
+			return;
+		e.preventDefault();
+		if (e.originalEvent.cancelable) e.originalEvent.preventDefault();
 
 		const coords = (feature.geometry as GeoJSON.Point).coordinates;
 		wasDraggedRef.current = false;
+		dragStartPointRef.current = e.point;
 		setDraggingPin({
 			id: feature.properties?.id as string,
 			longitude: coords[0],
@@ -200,8 +222,13 @@ function MapComponent({ campaign }: { campaign: Campaign }) {
 		setCursor("grabbing");
 	}
 
-	function onMouseMove(e: MapLayerMouseEvent) {
+	function onDragMove(e: MapLayerMouseEvent | MapLayerTouchEvent) {
 		if (!draggingPin) return;
+		if (
+			!wasDraggedRef.current &&
+			!movedPastThreshold(dragStartPointRef.current, e.point)
+		)
+			return;
 		wasDraggedRef.current = true;
 		setDraggingPin({
 			...draggingPin,
@@ -210,56 +237,30 @@ function MapComponent({ campaign }: { campaign: Campaign }) {
 		});
 	}
 
-	function onMouseUp(e: MapLayerMouseEvent) {
+	function onDragEnd(e: MapLayerMouseEvent | MapLayerTouchEvent) {
 		if (!draggingPin) return;
-		if (wasDraggedRef.current) {
+		if (wasDraggedRef.current && e.type !== "touchcancel") {
 			updatePositionMutation.mutate({
 				id: draggingPin.id as Id<"pins">,
 				latitude: e.lngLat.lat,
 				longitude: e.lngLat.lng,
 			});
 		}
+		if (!wasDraggedRef.current && e.type === "touchend") {
+			setMode({
+				mode: "focused-pin",
+				focusedPin: { id: draggingPin.id as Id<"pins"> },
+			});
+		}
+		// Touch start prevents the compatibility click, so no click will clear this.
+		if (e.type === "touchend" || e.type === "touchcancel") {
+			wasDraggedRef.current = false;
+		}
+		dragStartPointRef.current = null;
 		setDraggingPin(null);
 		e.target.dragPan.enable();
 		setCursor(mode.mode === "planning" ? "crosshair" : "grab");
 	}
-
-	// function onTouchStart(e: MapLayerTouchEvent) {
-	// 	const feature = e.features?.[0];
-	// 	if (feature?.layer?.id !== pinsPlannedLayer.id) return;
-
-	// 	const coords = (feature.geometry as GeoJSON.Point).coordinates;
-	// 	wasDraggedRef.current = false;
-	// 	setDraggingPin({
-	// 		id: feature.properties?.id as string,
-	// 		longitude: coords[0],
-	// 		latitude: coords[1],
-	// 	});
-	// 	e.target.dragPan.disable();
-	// }
-
-	// function onTouchMove(e: MapLayerTouchEvent) {
-	// 	if (!draggingPin) return;
-	// 	wasDraggedRef.current = true;
-	// 	setDraggingPin({
-	// 		...draggingPin,
-	// 		latitude: e.lngLat.lat,
-	// 		longitude: e.lngLat.lng,
-	// 	});
-	// }
-
-	// function onTouchEnd(e: MapLayerTouchEvent) {
-	// 	if (!draggingPin) return;
-	// 	if (wasDraggedRef.current) {
-	// 		updatePositionMutation.mutate({
-	// 			id: draggingPin.id as Id<"pins">,
-	// 			latitude: draggingPin.latitude,
-	// 			longitude: draggingPin.longitude,
-	// 		});
-	// 	}
-	// 	setDraggingPin(null);
-	// 	e.target.dragPan.enable();
-	// }
 
 	function onMouseEnter(e: MapLayerMouseEvent) {
 		if (draggingPin) return;
@@ -276,12 +277,11 @@ function MapComponent({ campaign }: { campaign: Campaign }) {
 		setCursor(mode.mode === "planning" ? "crosshair" : "grab");
 	}
 
-	const hasLocation =
-		geolocation.latitude != null && geolocation.longitude != null;
-	if (geolocation.longitude == null || geolocation.latitude == null) {
-		geolocation.longitude = campaign.longitude;
-		geolocation.latitude = campaign.latitude;
-	}
+	const hasLocation = hasFreshLocation(geolocation);
+	const initialCenter = {
+		longitude: campaign.longitude,
+		latitude: campaign.latitude,
+	};
 
 	return (
 		<MapProvider>
@@ -289,37 +289,40 @@ function MapComponent({ campaign }: { campaign: Campaign }) {
 				<div className="absolute inset-0">
 					<MapLibre
 						initialViewState={{
-							longitude: geolocation.longitude,
-							latitude: geolocation.latitude,
+							...initialCenter,
 							zoom: 16,
 						}}
 						// dragRotate={false}
 						pitchWithRotate={false}
-						keyboard={false}
+						keyboard={true}
+						clickTolerance={DRAG_THRESHOLD_PX}
 						style={{ width: "100%", height: "100%" }}
 						mapStyle={`https://api.maptiler.com/maps/streets/style.json?key=${env.VITE_MAPTILER_KEY}`}
 						interactiveLayerIds={interactiveLayerIds as unknown as string[]}
 						cursor={cursor}
 						onClick={onMapClick}
-						onMouseDown={onMouseDown}
-						onMouseMove={onMouseMove}
-						onMouseUp={onMouseUp}
+						onMouseDown={onDragStart}
+						onMouseMove={onDragMove}
+						onMouseUp={onDragEnd}
 						onMouseEnter={onMouseEnter}
 						onMouseLeave={onMouseLeave}
-						// onTouchStart={onTouchStart}
-						// onTouchMove={onTouchMove}
-						// onTouchEnd={onTouchEnd}
+						onTouchStart={onDragStart}
+						onTouchMove={onDragMove}
+						onTouchEnd={onDragEnd}
+						onTouchCancel={onDragEnd}
 					>
 						<AccuracyCricle geolocation={geolocation} />
-						{hasLocation && (
-							<Marker
-								longitude={geolocation.longitude}
-								latitude={geolocation.latitude}
-								anchor="bottom"
-							>
-								<div className="size-5 rounded-full bg-blue-600 border-2 border-white shadow-md"></div>
-							</Marker>
-						)}
+						{hasLocation &&
+							geolocation.latitude != null &&
+							geolocation.longitude != null && (
+								<Marker
+									longitude={geolocation.longitude}
+									latitude={geolocation.latitude}
+									anchor="bottom"
+								>
+									<div className="size-5 rounded-full bg-blue-600 border-2 border-white shadow-md"></div>
+								</Marker>
+							)}
 						<PinsLayer draggingPin={draggingPin} />
 						<MapControls geolocation={geolocation} />
 						<PinControl canSetPins={hasLocation} geolocation={geolocation} />
@@ -333,6 +336,7 @@ function MapComponent({ campaign }: { campaign: Campaign }) {
 									className="p-5"
 									variant="ghost"
 									size="icon-lg"
+									aria-label="Zurück zu den Kampagnen"
 									onClick={() => navigate({ to: "/" })}
 								>
 									<ArrowLeft />

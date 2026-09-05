@@ -11,7 +11,10 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { GeolocationState } from "@/lib/use-geolocation";
+import {
+	type UseGeolocationResult,
+	hasFreshLocation,
+} from "@/lib/use-geolocation";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useEffect, useRef, useState } from "react";
 import { useMap } from "react-map-gl/maplibre";
@@ -22,7 +25,7 @@ import PinSettingsPopup from "./pin-settings";
 export default function MapControls({
 	geolocation,
 }: {
-	geolocation: GeolocationState;
+	geolocation: UseGeolocationResult;
 }) {
 	const { current: map } = useMap();
 	const [bearing, setBearing] = useState(0);
@@ -31,6 +34,12 @@ export default function MapControls({
 
 	const longitude = geolocation.longitude;
 	const latitude = geolocation.latitude;
+	const hasLocation = hasFreshLocation(geolocation);
+	const locationLabel = !geolocation.supported
+		? "Standortbestimmung nicht unterstützt"
+		: geolocation.loading
+			? "Standort wird ermittelt…"
+			: "Standort erneut ermitteln";
 
 	useEffect(() => {
 		if (!map) {
@@ -63,7 +72,7 @@ export default function MapControls({
 	followModeRef.current = followMode;
 
 	useEffect(() => {
-		if (!map || latitude == null || longitude == null) return;
+		if (!map || latitude == null || longitude == null || !hasLocation) return;
 
 		if (!hasCenteredRef.current) {
 			hasCenteredRef.current = true;
@@ -82,7 +91,7 @@ export default function MapControls({
 				animate: true,
 			});
 		}
-	}, [map, latitude, longitude]);
+	}, [map, latitude, longitude, hasLocation]);
 
 	function handleLocationError() {
 		if (geolocation.error?.code === 1) {
@@ -115,11 +124,15 @@ export default function MapControls({
 	}
 
 	function handleLocationButtonClick() {
-		if (handleLocationError()) {
+		if (
+			latitude == null ||
+			longitude == null ||
+			!hasFreshLocation(geolocation)
+		) {
+			handleLocationError();
+			geolocation.refreshLocation();
 			return;
 		}
-
-		if (latitude == null || longitude == null) return;
 
 		if (followMode) {
 			setFollowMode(false);
@@ -205,21 +218,22 @@ export default function MapControls({
 						Hineinzoom
 					</TooltipContent>
 				</Tooltip>
-				{geolocation.error ? (
+				{!hasLocation ? (
 					<Tooltip>
 						<TooltipTrigger asChild>
 							<Button
 								className="p-5"
 								variant="ghost"
 								size="icon-lg"
-								onClick={handleLocationError}
+								onClick={handleLocationButtonClick}
+								disabled={geolocation.loading || !geolocation.supported}
 							>
 								<LocateOff className="size-5" />
-								<span className="sr-only">Standort nicht verfügbar</span>
+								<span className="sr-only">{locationLabel}</span>
 							</Button>
 						</TooltipTrigger>
 						<TooltipContent className="px-2 py-1 text-xs" side="left">
-							Standort nicht verfügbar
+							{locationLabel}
 						</TooltipContent>
 					</Tooltip>
 				) : (

@@ -1,6 +1,6 @@
 import { Migrations } from "@convex-dev/migrations";
 import { components } from "./_generated/api";
-import type { DataModel, Id } from "./_generated/dataModel";
+import type { DataModel } from "./_generated/dataModel";
 
 const migrations = new Migrations<DataModel>(components.migrations, {
 	migrationsLocationPrefix: "migrations:",
@@ -35,9 +35,18 @@ export const addHangAtColumn = migrations.define({
 export const addCampaignIdColumn = migrations.define({
 	table: "pins",
 	migrateOne: async (ctx, doc) => {
-		if (doc.campaignId === undefined || doc.campaignId === null) {
+		if (doc.campaignId == null || !(await ctx.db.get(doc.campaignId))) {
+			const campaignId = ctx.db.normalizeId(
+				"campaigns",
+				process.env.LEGACY_CAMPAIGN_ID ?? "",
+			);
+			if (!campaignId || !(await ctx.db.get(campaignId))) {
+				throw new Error(
+					"Set LEGACY_CAMPAIGN_ID to an existing campaign before migrating orphaned pins.",
+				);
+			}
 			await ctx.db.patch(doc._id, {
-				campaignId: "jh7fe4q149a63we6t1sd749dqd81wnmz" as Id<"campaigns">,
+				campaignId,
 			});
 		}
 	},

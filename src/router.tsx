@@ -7,6 +7,8 @@ import {
 import { createRouter } from "@tanstack/react-router";
 import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
 import { ConvexProvider } from "convex/react";
+import { ConvexError } from "convex/values";
+import { toast } from "sonner";
 import { TooltipProvider } from "./components/ui/tooltip";
 import { env } from "./env";
 import { routeTree } from "./routeTree.gen";
@@ -30,9 +32,15 @@ export function getRouter() {
 			},
 		},
 		mutationCache: new MutationCache({
-			// onError: (error) => {
-			// 	toast(error.message, { className: "bg-red-500 text-white" });
-			// },
+			onError: (error) => {
+				toast.error("Änderung konnte nicht gespeichert werden.", {
+					description:
+						error instanceof ConvexError && typeof error.data === "string"
+							? error.data
+							: "Bitte prüfe deine Verbindung und versuche es erneut.",
+					closeButton: true,
+				});
+			},
 		}),
 	});
 	convexQueryClient.connect(queryClient);

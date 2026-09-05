@@ -70,8 +70,8 @@ function CampaignList({ campaigns }: { campaigns: Campaign[] }) {
 								{campaign.startAt != null && (
 									<span>
 										{new Date(campaign.startAt).toLocaleDateString()}{" "}
-										{campaign.startAt != null &&
-											`- ${new Date(campaign.endAt ?? 0).toLocaleDateString()}`}
+										{campaign.endAt != null &&
+											`- ${new Date(campaign.endAt).toLocaleDateString()}`}
 									</span>
 								)}
 							</div>

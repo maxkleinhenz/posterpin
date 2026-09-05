@@ -1,13 +1,8 @@
 import { convexQuery } from "@convex-dev/react-query";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useConvex } from "convex/react";
-import type {
-	HangPinAgain,
-	InsertPin,
-	Pin,
-	TakePinDown,
-	UpdatePinColor,
-} from "convex/schema";
+import { useMutation, useMutationState } from "@tanstack/react-query";
+import type { OptimisticLocalStore } from "convex/browser";
+import { useMutation as useConvexMutation } from "convex/react";
+import type { Pin } from "convex/schema";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 
@@ -17,404 +12,94 @@ export const pinQueries = {
 		convexQuery(api.pins.list, { campaignId }),
 };
 
-async function getPinById(
-	queryClient: ReturnType<typeof useQueryClient>,
-	convex: ReturnType<typeof useConvex>,
-	pinId: Id<"pins">,
+// Convex replays pending updates on live data and rolls them back on failure.
+// Update both representations so an open details sheet agrees with the map.
+export function updateCachedPin(
+	store: OptimisticLocalStore,
+	id: Id<"pins">,
+	patch: Partial<
+		Pick<Pin, "latitude" | "longitude" | "color" | "hangAt" | "tookDownAt">
+	> | null,
 ) {
-	const pinFromDetail = queryClient.getQueryData<Pin>(
-		pinQueries.getById(pinId).queryKey,
-	);
-	if (pinFromDetail) return pinFromDetail;
-
-	const pinFromDb = await convex.query(api.pins.getById, { pinId });
-	queryClient.setQueryData(pinQueries.getById(pinId).queryKey, pinFromDb);
-	return pinFromDb;
+	const detail = store.getQuery(api.pins.getById, { pinId: id });
+	if (detail)
+		store.setQuery(
+			api.pins.getById,
+			{ pinId: id },
+			patch ? { ...detail, ...patch } : null,
+		);
+	for (const { args, value } of store.getAllQueries(api.pins.list)) {
+		if (!value) continue;
+		store.setQuery(
+			api.pins.list,
+			args,
+			patch
+				? value.map((pin) => (pin._id === id ? { ...pin, ...patch } : pin))
+				: value.filter((pin) => pin._id !== id),
+		);
+	}
 }
 
-export const useAddPinMutation = () => {
-	const queryClient = useQueryClient();
-	const convex = useConvex();
+// New documents become interactive only once Convex supplies a real ID.
+export function useAddPinMutation() {
+	const mutationFn = useConvexMutation(api.pins.add);
+	return useMutation({ mutationFn });
+}
 
-	return useMutation({
-		mutationFn: async (pin: InsertPin) => {
-			return await convex.mutation(api.pins.add, pin);
-		},
-		onMutate: async (pin) => {
-			// Cancel outgoing refetches
-			await queryClient.cancelQueries({
-				queryKey: pinQueries.list(pin.campaignId).queryKey,
-			});
+export function useAddPlannedPinMutation() {
+	const mutationFn = useConvexMutation(api.pins.addPlanned);
+	return useMutation({ mutationKey: ["add-planned-pin"], mutationFn });
+}
 
-			// Snapshot the previous value
-			const previousPins = queryClient.getQueryData<Pin[]>(
-				pinQueries.list(pin.campaignId).queryKey,
-			);
+const pinStatusMutationKey = ["pin-status"] as const;
 
-			// Optimistically update the cache with a temporary Pin
-			const optimisticPin: Pin = {
-				...pin,
-				_id: "temp_id" as Id<"pins">, // Temporary ID until server responds
-				_creationTime: Date.now(),
-				hangAt: Date.now(),
-				tookDownAt: null,
-			};
-
-			queryClient.setQueryData<Pin[]>(
-				pinQueries.list(pin.campaignId).queryKey,
-				(old) => {
-					if (!old) return [optimisticPin];
-					return [optimisticPin, ...old];
-				},
-			);
-
-			// Return context for rollback
-			return { previousPins, campaignId: pin.campaignId };
-		},
-		onError: (_error, _variables, context) => {
-			// Rollback on error
-			if (context?.previousPins) {
-				queryClient.setQueryData(
-					pinQueries.list(context.campaignId).queryKey,
-					context.previousPins,
-				);
-			}
-		},
-		onSettled: (_data, _error, context) => {
-			// Invalidate to refetch and ensure consistency
-			queryClient.invalidateQueries({
-				queryKey: pinQueries.list(context.campaignId).queryKey,
-			});
-		},
+export function usePendingPinStatusIds() {
+	// A mutation observer only exposes its latest call; the cache retains all.
+	const ids = useMutationState({
+		filters: { mutationKey: pinStatusMutationKey, status: "pending" },
+		select: (mutation) => (mutation.state.variables as { id: Id<"pins"> }).id,
 	});
-};
+	return new Set(ids);
+}
 
+// The server stamps the authoritative time; the local clock only fills the gap
+// until the real value arrives, so a skewed device cannot persist a bad one.
 export function useTakeDownPinMutation() {
-	const queryClient = useQueryClient();
-	const convex = useConvex();
-
-	return useMutation({
-		mutationFn: async (pin: TakePinDown) => {
-			return await convex.mutation(api.pins.takeDown, pin);
-		},
-		onMutate: async (pin) => {
-			const existingPin = await getPinById(queryClient, convex, pin.id);
-			if (!existingPin) throw new Error("Pin not found");
-
-			// Cancel outgoing refetches
-			await queryClient.cancelQueries({
-				queryKey: pinQueries.list(existingPin.campaignId).queryKey,
-			});
-
-			// Snapshot the previous value
-			const previousPins = queryClient.getQueryData<Pin[]>(
-				pinQueries.list(existingPin.campaignId).queryKey,
-			);
-			const newPin = { ...existingPin, tookDownAt: pin.tookDownAt };
-
-			// Optimistically update the pin with tookDownAt timestamp
-			queryClient.setQueryData<Pin[]>(
-				pinQueries.list(existingPin.campaignId).queryKey,
-				(old) => {
-					if (!old) return [];
-					return old.map((p) => (p._id === pin.id ? newPin : p));
-				},
-			);
-
-			// Return context for rollback
-			return { previousPins, newPin };
-		},
-		onError: (_error, _variables, context) => {
-			// Rollback on error
-			if (context?.previousPins) {
-				queryClient.setQueryData(
-					pinQueries.list(context.newPin.campaignId).queryKey,
-					context.previousPins,
-				);
-			}
-		},
-		onSettled: async (_data, _error, variables) => {
-			const existingPin = await getPinById(queryClient, convex, variables.id);
-			if (existingPin) {
-				queryClient.invalidateQueries({
-					queryKey: pinQueries.list(existingPin.campaignId).queryKey,
-				});
-				return;
-			}
-
-			queryClient.invalidateQueries();
-		},
-	});
+	const mutationFn = useConvexMutation(api.pins.takeDown).withOptimisticUpdate(
+		(store, { id }) => updateCachedPin(store, id, { tookDownAt: Date.now() }),
+	);
+	return useMutation({ mutationKey: pinStatusMutationKey, mutationFn });
 }
-
-export const useUpdatePinPositionMutation = () => {
-	const queryClient = useQueryClient();
-	const convex = useConvex();
-
-	return useMutation({
-		mutationFn: async ({
-			id,
-			latitude,
-			longitude,
-		}: {
-			id: Id<"pins">;
-			latitude: number;
-			longitude: number;
-		}) => {
-			return await convex.mutation(api.pins.updatePosition, {
-				id,
-				latitude,
-				longitude,
-			});
-		},
-		onMutate: async ({ id, latitude, longitude }) => {
-			const existingPin = await getPinById(queryClient, convex, id);
-			if (!existingPin) throw new Error("Pin not found");
-
-			await queryClient.cancelQueries({
-				queryKey: pinQueries.list(existingPin.campaignId).queryKey,
-			});
-
-			const previousPins = queryClient.getQueryData<Pin[]>(
-				pinQueries.list(existingPin.campaignId).queryKey,
-			);
-
-			queryClient.setQueryData<Pin[]>(
-				pinQueries.list(existingPin.campaignId).queryKey,
-				(old) =>
-					old?.map((p) => (p._id === id ? { ...p, latitude, longitude } : p)) ??
-					[],
-			);
-
-			return { previousPins, campaignId: existingPin.campaignId };
-		},
-		onError: (_error, _variables, context) => {
-			if (context?.previousPins) {
-				queryClient.setQueryData(
-					pinQueries.list(context.campaignId).queryKey,
-					context.previousPins,
-				);
-			}
-		},
-		onSettled: (_data, _error, _variables, context) => {
-			if (context?.campaignId) {
-				queryClient.invalidateQueries({
-					queryKey: pinQueries.list(context.campaignId).queryKey,
-				});
-			}
-		},
-	});
-};
-
-export const useRemovePinMutation = () => {
-	const queryClient = useQueryClient();
-	const convex = useConvex();
-
-	return useMutation({
-		mutationFn: async (pinId: Id<"pins">) => {
-			return await convex.mutation(api.pins.remove, { id: pinId });
-		},
-		onMutate: async (pinId) => {
-			const existingPin = await getPinById(queryClient, convex, pinId);
-			if (!existingPin) throw new Error("Pin not found");
-
-			await queryClient.cancelQueries({
-				queryKey: pinQueries.list(existingPin.campaignId).queryKey,
-			});
-
-			const previousPins = queryClient.getQueryData<Pin[]>(
-				pinQueries.list(existingPin.campaignId).queryKey,
-			);
-
-			queryClient.setQueryData<Pin[]>(
-				pinQueries.list(existingPin.campaignId).queryKey,
-				(old) => old?.filter((p) => p._id !== pinId) ?? [],
-			);
-
-			return { previousPins, campaignId: existingPin.campaignId };
-		},
-		onError: (_error, _variables, context) => {
-			if (context?.previousPins) {
-				queryClient.setQueryData(
-					pinQueries.list(context.campaignId).queryKey,
-					context.previousPins,
-				);
-			}
-		},
-		onSettled: (_data, _error, _variables, context) => {
-			if (context?.campaignId) {
-				queryClient.invalidateQueries({
-					queryKey: pinQueries.list(context.campaignId).queryKey,
-				});
-			}
-		},
-	});
-};
-
-export const useAddPlannedPinMutation = () => {
-	const queryClient = useQueryClient();
-	const convex = useConvex();
-
-	return useMutation({
-		mutationFn: async (pin: InsertPin) => {
-			return await convex.mutation(api.pins.addPlanned, pin);
-		},
-		onMutate: async (pin) => {
-			await queryClient.cancelQueries({
-				queryKey: pinQueries.list(pin.campaignId).queryKey,
-			});
-
-			const previousPins = queryClient.getQueryData<Pin[]>(
-				pinQueries.list(pin.campaignId).queryKey,
-			);
-
-			const optimisticPin: Pin = {
-				...pin,
-				_id: "temp_id" as Id<"pins">,
-				_creationTime: Date.now(),
-				hangAt: null,
-				tookDownAt: null,
-			};
-
-			queryClient.setQueryData<Pin[]>(
-				pinQueries.list(pin.campaignId).queryKey,
-				(old) => {
-					if (!old) return [optimisticPin];
-					return [optimisticPin, ...old];
-				},
-			);
-
-			return { previousPins, campaignId: pin.campaignId };
-		},
-		onError: (_error, _variables, context) => {
-			if (context?.previousPins) {
-				queryClient.setQueryData(
-					pinQueries.list(context.campaignId).queryKey,
-					context.previousPins,
-				);
-			}
-		},
-		onSettled: (_data, _error, context) => {
-			queryClient.invalidateQueries({
-				queryKey: pinQueries.list(context.campaignId).queryKey,
-			});
-		},
-	});
-};
 
 export function useHangAgainPinMutation() {
-	const queryClient = useQueryClient();
-	const convex = useConvex();
+	const mutationFn = useConvexMutation(api.pins.hangAgain).withOptimisticUpdate(
+		(store, { id }) =>
+			updateCachedPin(store, id, { hangAt: Date.now(), tookDownAt: null }),
+	);
+	return useMutation({ mutationKey: pinStatusMutationKey, mutationFn });
+}
 
-	return useMutation({
-		mutationFn: async (pin: HangPinAgain) => {
-			return await convex.mutation(api.pins.hangAgain, pin);
-		},
-		onMutate: async (pin) => {
-			const existingPin = await getPinById(queryClient, convex, pin.id);
-			if (!existingPin) throw new Error("Pin not found");
+export function useUpdatePinPositionMutation() {
+	const mutationFn = useConvexMutation(
+		api.pins.updatePosition,
+	).withOptimisticUpdate((store, { id, latitude, longitude }) =>
+		updateCachedPin(store, id, { latitude, longitude }),
+	);
+	return useMutation({ mutationFn });
+}
 
-			// Cancel outgoing refetches
-			await queryClient.cancelQueries({
-				queryKey: pinQueries.list(existingPin.campaignId).queryKey,
-			});
-
-			// Snapshot the previous value
-			const previousPins = queryClient.getQueryData<Pin[]>(
-				pinQueries.list(existingPin.campaignId).queryKey,
-			);
-
-			const newPin = { ...existingPin, tookDownAt: null, hangAt: pin.hangAt };
-
-			// Optimistically update the pin with tookDownAt timestamp
-			queryClient.setQueryData<Pin[]>(
-				pinQueries.list(existingPin.campaignId).queryKey,
-				(old) => {
-					if (!old) return [];
-					return old.map((p) => (p._id === pin.id ? newPin : p));
-				},
-			);
-
-			// Return context for rollback
-			return { previousPins, newPin };
-		},
-		onError: (_error, _variables, context) => {
-			// Rollback on error
-			if (context?.previousPins) {
-				queryClient.setQueryData(
-					pinQueries.list(context.newPin.campaignId).queryKey,
-					context.previousPins,
-				);
-			}
-		},
-		onSettled: async (_data, _error, variables) => {
-			const existingPin = await getPinById(queryClient, convex, variables.id);
-			if (existingPin) {
-				queryClient.invalidateQueries({
-					queryKey: pinQueries.list(existingPin.campaignId).queryKey,
-				});
-				return;
-			}
-
-			queryClient.invalidateQueries();
-		},
-	});
+export function useRemovePinMutation() {
+	const remove = useConvexMutation(api.pins.remove).withOptimisticUpdate(
+		(store, { id }) => updateCachedPin(store, id, null),
+	);
+	return useMutation({ mutationFn: (id: Id<"pins">) => remove({ id }) });
 }
 
 export function useUpdatePinColorMutation() {
-	const queryClient = useQueryClient();
-	const convex = useConvex();
-
-	return useMutation({
-		mutationFn: async (pin: UpdatePinColor) => {
-			return await convex.mutation(api.pins.updateColor, pin);
-		},
-		onMutate: async (pin) => {
-			const existingPin = await getPinById(queryClient, convex, pin.id);
-			if (!existingPin) throw new Error("Pin not found");
-
-			await queryClient.cancelQueries({
-				queryKey: pinQueries.list(existingPin.campaignId).queryKey,
-			});
-
-			const previousPins = queryClient.getQueryData<Pin[]>(
-				pinQueries.list(existingPin.campaignId).queryKey,
-			);
-			const newPin = { ...existingPin, color: pin.color };
-
-			queryClient.setQueryData<Pin[]>(
-				pinQueries.list(existingPin.campaignId).queryKey,
-				(old) => old?.map((p) => (p._id === pin.id ? newPin : p)) ?? [],
-			);
-			queryClient.setQueryData(pinQueries.getById(pin.id).queryKey, newPin);
-
-			return { previousPins, newPin };
-		},
-		onError: (_error, _variables, context) => {
-			if (context?.previousPins) {
-				queryClient.setQueryData(
-					pinQueries.list(context.newPin.campaignId).queryKey,
-					context.previousPins,
-				);
-				queryClient.setQueryData(
-					pinQueries.getById(context.newPin._id).queryKey,
-					context.newPin,
-				);
-			}
-		},
-		onSettled: async (_data, _error, variables) => {
-			const existingPin = await getPinById(queryClient, convex, variables.id);
-			if (existingPin) {
-				queryClient.invalidateQueries({
-					queryKey: pinQueries.list(existingPin.campaignId).queryKey,
-				});
-				queryClient.invalidateQueries({
-					queryKey: pinQueries.getById(variables.id).queryKey,
-				});
-				return;
-			}
-
-			queryClient.invalidateQueries();
-		},
-	});
+	const mutationFn = useConvexMutation(
+		api.pins.updateColor,
+	).withOptimisticUpdate((store, { id, color }) =>
+		updateCachedPin(store, id, { color }),
+	);
+	return useMutation({ mutationFn });
 }

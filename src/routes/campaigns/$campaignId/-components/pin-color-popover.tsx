@@ -18,10 +18,12 @@ export default function PinColorPopover({
 	selectedColor,
 	onSelectColor,
 	wheelClassName,
+	disabled,
 }: {
 	selectedColor: PinColor;
 	onSelectColor: (color: PinColor) => void;
 	wheelClassName?: string;
+	disabled?: boolean;
 }) {
 	const { pinFilter } = useAppStore(
 		useShallow((state) => ({
@@ -35,6 +37,8 @@ export default function PinColorPopover({
 				<Button
 					className={`shadow-md h-full p-2 transition-all ${colors[selectedColor].bg}`}
 					size="lg"
+					disabled={disabled}
+					aria-label={`Farbe wählen: ${colors[selectedColor].label}`}
 				>
 					<img
 						src={ColorWheel}
@@ -82,6 +86,8 @@ function ColorButton({
 			className={`size-10 ${colors[color].bg}`}
 			onClick={() => onSelectColor(color)}
 			disabled={disabled}
+			aria-label={colors[color].label}
+			aria-pressed={selected}
 		>
 			{selected && (
 				<Check className="stroke-3 rounded-full bg-muted text-muted-foreground size-4 p-0.5" />

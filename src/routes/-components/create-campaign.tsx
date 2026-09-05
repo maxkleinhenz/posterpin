@@ -115,17 +115,22 @@ export default function CreateCampaign() {
 		}
 		const campaignDescription = data.description.trim();
 
-		await addCampaignMutation.mutateAsync({
-			name: campaignName,
-			description: campaignDescription === "" ? undefined : campaignDescription,
-			longitude: data.longitude,
-			latitude: data.latitude,
-			startAt: data.startAt?.getTime(),
-			endAt: data.endAt?.getTime(),
-		});
+		try {
+			await addCampaignMutation.mutateAsync({
+				name: campaignName,
+				description:
+					campaignDescription === "" ? undefined : campaignDescription,
+				longitude: data.longitude,
+				latitude: data.latitude,
+				startAt: data.startAt?.getTime(),
+				endAt: data.endAt?.getTime(),
+			});
 
-		setDialogOpen(false);
-		resetForm();
+			setDialogOpen(false);
+			resetForm();
+		} catch {
+			// The global mutation handler displays the error; keep the form for retry.
+		}
 	}
 
 	const throttleMapMove = useThrottledCallback(
@@ -244,6 +249,8 @@ export default function CreateCampaign() {
 															<Button
 																variant="ghost"
 																disabled={!selectedDate}
+																type="button"
+																aria-label="Datum entfernen"
 																onClick={() => field.onChange(undefined)}
 															>
 																<CircleX className="size-4 opacity-50" />
@@ -307,6 +314,8 @@ export default function CreateCampaign() {
 															<Button
 																variant="ghost"
 																disabled={!selectedDate}
+																type="button"
+																aria-label="Datum entfernen"
 																onClick={() => field.onChange(undefined)}
 															>
 																<CircleX className="size-4 opacity-50" />
@@ -349,7 +358,7 @@ export default function CreateCampaign() {
 										}}
 										dragRotate={false}
 										pitchWithRotate={false}
-										keyboard={false}
+										keyboard={true}
 										style={{ width: "100%", height: "100%" }}
 										mapStyle={`https://api.maptiler.com/maps/streets/style.json?key=${env.VITE_MAPTILER_KEY}`}
 										onMove={(event) =>
@@ -381,7 +390,10 @@ export default function CreateCampaign() {
 						<Button
 							type="button"
 							variant="outline"
-							onClick={() => setDialogOpen(false)}
+							onClick={() => {
+								setDialogOpen(false);
+								resetForm();
+							}}
 						>
 							Abbrechen
 						</Button>

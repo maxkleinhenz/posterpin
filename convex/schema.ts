@@ -45,15 +45,15 @@ export const insertPinSchema = v.object({
 });
 export type InsertPin = Infer<typeof insertPinSchema>;
 
+// The hang/take-down moments come from the server clock: a device whose clock
+// is skewed would otherwise write times that contradict the pin's own history.
 export const takePinDownSchema = v.object({
 	id: v.id("pins"),
-	tookDownAt: v.number(),
 });
 export type TakePinDown = Infer<typeof takePinDownSchema>;
 
 export const hangPinAgainSchema = v.object({
 	id: v.id("pins"),
-	hangAt: v.number(),
 });
 export type HangPinAgain = Infer<typeof hangPinAgainSchema>;
 

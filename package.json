@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "npx convex dev --once && concurrently -r npm:dev:web npm:dev:db",
     "dev:web": "vite dev",
-    "dev:db": "convex dev --run campaigns:seed --run pins:seed ",
+    "dev:db": "convex dev --run pins:seed",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
@@ -56,7 +56,6 @@
     "zustand": "^5.0.11"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.2.4",
     "@tanstack/devtools-vite": "^0.3.11",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/react": "^16.2.0",
@@ -66,7 +65,10 @@
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.0.4",
     "babel-plugin-react-compiler": "^1.0.0",
+    "convex-test": "^0.0.41",
     "jsdom": "^27.0.0",
+    "oxfmt": "^0.66.0",
+    "oxlint": "^1.81.0",
     "typescript": "^5.7.2",
     "vite": "^7.1.7",
     "vite-tsconfig-paths": "^5.1.4",

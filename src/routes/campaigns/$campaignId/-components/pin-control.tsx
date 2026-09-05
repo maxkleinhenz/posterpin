@@ -1,13 +1,15 @@
+import { useIsMutating } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
 import type { Id } from "convex/_generated/dataModel";
-import { FilterX, LocateOff } from "lucide-react";
+import { LocateOff } from "lucide-react";
+import { useMap } from "react-map-gl/maplibre";
 import { useShallow } from "zustand/react/shallow";
 import { colors } from "@/colors";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { AddPin } from "@/icons";
-import type { GeolocationState } from "@/lib/use-geolocation";
-import { useAddPinMutation } from "@/queries/pins";
+import { type GeolocationState, hasFreshLocation } from "@/lib/use-geolocation";
+import { useAddPinMutation, useAddPlannedPinMutation } from "@/queries/pins";
 import { useAppStore } from "@/store/app-store";
 import PinColorPopover from "./pin-color-popover";
 
@@ -19,7 +21,10 @@ export default function PinControl({
 	geolocation: GeolocationState;
 }) {
 	const { campaignId } = useParams({ from: "/campaigns/$campaignId/" });
-	const addPinMutation = useAddPinMutation();
+	const { current: map } = useMap();
+	const addPin = useAddPinMutation();
+	const addPlannedPin = useAddPlannedPinMutation();
+	const pendingPlans = useIsMutating({ mutationKey: ["add-planned-pin"] });
 	const { mode, setMode, pinColor, setPinColor, pinFilter } = useAppStore(
 		useShallow((state) => ({
 			mode: state.mode,
@@ -29,25 +34,34 @@ export default function PinControl({
 			pinFilter: state.pinFilter,
 		})),
 	);
+	const canPlan = pinFilter.planned && pinFilter.colors[pinColor];
 
-	const anyColorEnabled = Object.values(pinFilter.colors).some((c) => c);
-
-	const longitude = geolocation.longitude;
-	const latitude = geolocation.latitude;
-	const isPlanning = mode.mode === "planning";
-
-	if (isPlanning) {
+	if (mode.mode === "planning") {
 		return (
-			<div className="absolute bottom-10 inset-x-0 flex px-8 flex-col items-center gap-2">
-				<div className="bg-blue-600 text-white text-pretty text-sm px-6 py-2 rounded-full shadow-md">
-					Planungsmodus — Tippe auf die Karte um ein Plakat zu planen
-				</div>
+			<div className="absolute bottom-10 inset-x-0 flex px-16 flex-col items-center gap-2">
+				<output className="bg-blue-600 text-white text-center text-sm px-4 py-2 rounded-md shadow-md">
+					{!canPlan
+						? "Bitte geplante Plakate und eine Farbe in den Einstellungen einblenden."
+						: pendingPlans
+							? "Plakat wird gespeichert…"
+							: "Tippe auf die Karte oder verschiebe sie mit den Pfeiltasten und plane ein Plakat in der Kartenmitte."}
+				</output>
 				<Button
-					className="shadow-md p-6"
-					size="lg"
-					variant="outline"
-					onClick={() => setMode({ mode: "none" })}
+					disabled={!canPlan || pendingPlans > 0 || !map}
+					onClick={() => {
+						if (!map || !canPlan || pendingPlans) return;
+						const center = map.getCenter();
+						addPlannedPin.mutate({
+							campaignId: campaignId as Id<"campaigns">,
+							longitude: center.lng,
+							latitude: center.lat,
+							color: pinColor,
+						});
+					}}
 				>
+					In Kartenmitte planen
+				</Button>
+				<Button variant="outline" onClick={() => setMode({ mode: "none" })}>
 					Beenden
 				</Button>
 			</div>
@@ -56,40 +70,47 @@ export default function PinControl({
 
 	return (
 		<div className="flex gap-2 absolute left-1/2 -translate-x-1/2 bottom-10 justify-center">
-			{canSetPins && longitude != null && latitude != null ? (
-				anyColorEnabled ? (
+			{canSetPins && hasFreshLocation(geolocation) ? (
+				pinFilter.colors[pinColor] ? (
 					<ButtonGroup>
 						<Button
 							className={`shadow-md p-6 ${colors[pinColor].bg} ${colors[pinColor].text}`}
 							size="lg"
+							disabled={addPin.isPending}
 							onClick={() => {
-								addPinMutation.mutate({
-									latitude: latitude,
-									longitude: longitude,
+								if (
+									!hasFreshLocation(geolocation) ||
+									geolocation.latitude == null ||
+									geolocation.longitude == null ||
+									addPin.isPending
+								)
+									return;
+								addPin.mutate({
+									latitude: geolocation.latitude,
+									longitude: geolocation.longitude,
 									campaignId: campaignId as Id<"campaigns">,
 									color: pinColor,
 								});
 							}}
 						>
-							<AddPin className="size-5" /> Plakat hängen
+							<AddPin className="size-5" />{" "}
+							{addPin.isPending ? "Speichere…" : "Plakat hängen"}
 						</Button>
 						<PinColorPopover
 							selectedColor={pinColor}
-							onSelectColor={(color) => {
-								console.log(color);
-								setPinColor(color);
-							}}
+							onSelectColor={setPinColor}
+							disabled={addPin.isPending}
 						/>
 					</ButtonGroup>
 				) : (
-					<div className="flex gap-2 items-center bg-white text-sm p-2 rounded-full shadow-md">
-						<FilterX className="size-5" /> Keine Farbe ausgewählt
-					</div>
+					<p className="bg-background text-sm p-2 rounded-full shadow-md">
+						Keine Farbe ausgewählt
+					</p>
 				)
 			) : (
-				<div className="flex gap-2 items-center bg-white text-sm p-2 rounded-full">
+				<output className="flex gap-2 items-center bg-background text-sm p-2 rounded-full">
 					<LocateOff className="size-5" /> Standort nicht verfügbar
-				</div>
+				</output>
 			)}
 		</div>
 	);

@@ -220,6 +220,8 @@ function ColorButton({
 		<Button
 			className={`size-10 ${colors[color].bg}`}
 			onClick={() => onToggle()}
+			aria-label={colors[color].label}
+			aria-pressed={selected}
 		>
 			{selected && (
 				<Check className="stroke-3 rounded-full bg-muted text-muted-foreground size-4 p-0.5" />

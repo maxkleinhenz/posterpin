@@ -5,6 +5,7 @@ import type { ExpressionSpecification } from "maplibre-gl";
 import { colors, type PinColor } from "@/colors";
 import { pinQueries } from "@/queries/pins";
 import { useAppStore } from "@/store/app-store";
+import { getPinStatus, normalizePinColor } from "../../../../../shared/pins";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useEffect, useMemo } from "react";
 import {
@@ -90,7 +91,7 @@ export const plannedSourceId = "pins-source-planned";
 const pinColors = Object.keys(colors) as PinColor[];
 
 function getPinColorKey(color: string | undefined): PinColor {
-	if (color && color in colors) {
+	if (color && Object.hasOwn(colors, color)) {
 		return color as PinColor;
 	}
 
@@ -349,24 +350,24 @@ export default function PinsLayer({
 		const hung = pins.data
 			.filter(
 				(p) =>
-					p.hangAt != null &&
-					p.tookDownAt == null &&
-					pinFilter.colors[p.color as PinColor],
+					getPinStatus(p) === "hung" &&
+					pinFilter.colors[normalizePinColor(p.color)],
 			)
 			.map((p) => toFeature(p));
 
 		const tookDown = pins.data
 			.filter(
-				(p) => p.tookDownAt != null && pinFilter.colors[p.color as PinColor],
+				(p) =>
+					getPinStatus(p) === "tookDown" &&
+					pinFilter.colors[normalizePinColor(p.color)],
 			)
 			.map((p) => toFeature(p));
 
 		const planned = pins.data
 			.filter(
 				(p) =>
-					p.hangAt == null &&
-					p.tookDownAt == null &&
-					pinFilter.colors[p.color as PinColor],
+					getPinStatus(p) === "planned" &&
+					pinFilter.colors[normalizePinColor(p.color)],
 			)
 			.map((p) => toFeature(p, draggingPin));
 

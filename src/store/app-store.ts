@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { colors, type PinColor } from "@/colors";
+import type { Id } from "../../convex/_generated/dataModel";
 
 export type Mode =
 	| {
@@ -24,10 +25,7 @@ export type PinFilter = {
 };
 
 export type FocusedPin = {
-	id: string;
-	hangAt: Date | null;
-	tookDownAt: Date | null;
-	Color: PinColor;
+	id: Id<"pins">;
 };
 const allColors = Object.fromEntries(
 	Object.keys(colors).map((color) => [color, true]),
@@ -55,7 +53,19 @@ interface AppState {
 
 export const useAppStore = create<AppState>((set) => ({
 	mode: { mode: "none" },
-	setMode: (mode) => set(() => ({ mode: mode })),
+	setMode: (mode) =>
+		set((state) => ({
+			mode,
+			...(mode.mode === "planning"
+				? {
+						pinFilter: {
+							...state.pinFilter,
+							planned: true,
+							colors: { ...state.pinFilter.colors, [state.pinColor]: true },
+						},
+					}
+				: {}),
+		})),
 	pinFilter: { ...defaultFilter },
 	setPinFilter: (filter) =>
 		set((state) => {
