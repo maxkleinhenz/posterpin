@@ -29,7 +29,9 @@ export default function MapControls({
 }: {
 	geolocation: UseGeolocationResult;
 }) {
-	const { current: map } = useMap();
+	const maps = useMap();
+	// Rendered next to the map rather than inside it, so there is no current map.
+	const map = maps.current ?? maps.default;
 	const [bearing, setBearing] = useState(0);
 	const [followMode, setFollowMode] = useState(false);
 	const hasCenteredRef = useRef(false);

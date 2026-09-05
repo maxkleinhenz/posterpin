@@ -338,10 +338,13 @@ function MapComponent({ campaign }: { campaign: Campaign }) {
 								</Marker>
 							)}
 						<PinsLayer draggingPin={draggingPin} />
-						<MapControls geolocation={geolocation} />
-						<PinControl canSetPins={hasLocation} geolocation={geolocation} />
 					</MapLibre>
 				</MapViewport>
+				{/* The map chrome sits outside the viewport: the viewport is pinned
+				    while a panel slides, and these have to follow the shrinking map
+				    area frame by frame instead. */}
+				<MapControls geolocation={geolocation} />
+				<PinControl canSetPins={hasLocation} geolocation={geolocation} />
 				<div className="absolute top-4 left-4 flex gap-2">
 					<div className="flex items-center gap-2 p-1 bg-background rounded-md shadow-md">
 						<Tooltip>
